@@ -121,29 +121,47 @@ def test_union_maps_schema_converts_units_and_adds_provenance():
 
 # --- dedupe -------------------------------------------------------------------------
 
-def test_dedupe_exact_and_near_duplicates_with_trust_ordering():
+def test_exact_duplicates_removed_conflicting_near_duplicates_kept_and_flagged():
     t, _ = union_sources(SPEC, sources(), CFG)
     cols = [SPEC.target.name, *SPEC.feature_names()]
     out, rep = dedupe(t, cols, "price", CFG)
     assert rep.exact_removed == 1          # the two identical Dwarka rows in source a
-    assert rep.near_removed == 1           # Rohini re-posted in b at another price
-    assert out.height == 4
-    assert "a:0" in out["_row_ref"].to_list() and "b:0" not in out["_row_ref"].to_list()  # a more trusted
-    assert rep.target_conflicts and rep.target_conflicts[0]["kept"] == "a:0"
+    # Rohini re-posted in b at 70 Lac vs 65 Lac (7.7% apart): never merged on a guess
+    assert rep.near_removed == 0 and out.height == 5
+    assert {"a:0", "b:0"} <= set(out["_row_ref"].to_list())
+    assert rep.target_conflicts == [{"rows": ["a:0", "b:0"], "target_values": [6_500_000.0, 7_000_000.0]}]
+    assert rep.agreement["a:0"] == rep.agreement["b:0"] == "disagree"
+    assert "a:2" not in rep.agreement      # Dwarka duplicates come from one source only
 
 
-def test_dedupe_records_cross_source_agreement():
-    t, _ = union_sources(SPEC, sources(), CFG)
-    cols = [SPEC.target.name, *SPEC.feature_names()]
-    _, rep = dedupe(t, cols, "price", CFG)
-    assert rep.agreement["a:0"] == "disagree"      # Rohini: 65 Lac (a) vs 70 Lac (b)
-    assert "a:2" not in rep.agreement              # Dwarka duplicates come from one source only
+def _with_b_price(price):
+    src = sources()
+    src[1].df = src[1].df.with_columns(pl.Series("cost", [price, "₹ 9,500,000"]))
+    return src
 
-    same_price = sources()
-    same_price[1].df = same_price[1].df.with_columns(pl.Series("cost", ["65 Lac", "₹ 9,500,000"]))
-    t2, _ = union_sources(SPEC, same_price, CFG)
-    _, rep2 = dedupe(t2, cols, "price", CFG)
-    assert rep2.agreement["a:0"] == "confirmed"     # identical record from two sources
+
+def test_near_duplicate_with_agreeing_target_is_merged_by_trust():
+    t, _ = union_sources(SPEC, _with_b_price("66 Lac"), CFG)  # 1.5% apart: same listing
+    out, rep = dedupe(t, [SPEC.target.name, *SPEC.feature_names()], "price", CFG)
+    assert rep.near_removed == 1 and "b:0" not in out["_row_ref"].to_list()  # a is more trusted
+    assert rep.agreement["a:0"] == "confirmed"
+
+
+def test_identical_record_from_two_sources_is_confirmed():
+    t, _ = union_sources(SPEC, _with_b_price("65 Lac"), CFG)
+    _, rep = dedupe(t, [SPEC.target.name, *SPEC.feature_names()], "price", CFG)
+    assert rep.agreement["a:0"] == "confirmed"
+
+
+def test_same_specs_different_price_within_one_source_are_distinct_items():
+    # e.g. two laptop models with identical spec columns but different prices
+    one = SourceTable(sources()[0].candidate, pl.DataFrame({
+        "Price": ["50000", "90000"], "Area": ["1000", "1000"], "BHK": ["2", "2"],
+        "Locality": ["Saket", "Saket"], "lat": ["28.52", "28.52"], "lon": ["77.21", "77.21"],
+    }))
+    t, _ = union_sources(SPEC, [one], CFG)
+    out, rep = dedupe(t, [SPEC.target.name, *SPEC.feature_names()], "price", CFG)
+    assert out.height == 2 and rep.target_conflicts == [] and rep.agreement == {}
 
 
 def test_distinct_rows_are_not_merged():
@@ -214,7 +232,7 @@ def test_integrate_end_to_end_writes_parquet_and_report(tmp_path):
     ], S, impute_group_by="locality")
 
     t, rep = res.table, res.report
-    assert t.height == 4 and rep.rows_after_union == 6
+    assert t.height == 5 and rep.rows_after_union == 6  # 1 exact dup removed; conflicting re-post kept
     assert t.columns[-5:] == ["_row_ref", "_source_id", "_method", "_source_trust", "_retrieved_at"]
     assert rep.lineage["price"] == ["a.Price", "b.cost"]
     assert rep.lineage["distance_to_metro_km"] == ["derived:osm_transit_stations:nearest_point"]
@@ -225,4 +243,16 @@ def test_integrate_end_to_end_writes_parquet_and_report(tmp_path):
     back = pl.read_parquet(paths["table"])
     assert back.equals(t)
     js = json.loads(paths["report"].read_text(encoding="utf-8"))
-    assert js["dedupe"]["near_removed"] == 1 and js["imputation_plan"]
+    assert js["dedupe"]["exact_removed"] == 1 and len(js["dedupe"]["target_conflicts"]) == 1 and js["imputation_plan"]
+
+
+def test_spec_dtype_contradicted_by_data_is_corrected_and_reported():
+    # Real-data regression: the requirement analyser once declared locality as float.
+    bad = SPEC.model_copy(update={"features": [
+        f.model_copy(update={"dtype": "float"}) if f.name == "locality" else f for f in SPEC.features]})
+    res = integrate(bad, sources(), settings=S)
+    assert {f.name: f.dtype for f in res.spec.features}["locality"] == "category"
+    assert res.table["locality"].dtype == pl.Utf8
+    assert res.table["locality"].null_count() == 0
+    assert any("dtype corrected: locality" in w for w in res.report.warnings)
+    assert res.spec.features[0].dtype == "float"  # genuinely numeric features untouched

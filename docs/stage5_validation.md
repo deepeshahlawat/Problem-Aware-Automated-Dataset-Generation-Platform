@@ -10,7 +10,10 @@ Rules are built from the `DatasetSpec` alone. Deriving them from the data being 
 | Rule | Severity | When |
 |---|---|---|
 | target not null | **hard** | always |
-| target in expected range, or ≥ 0 | **hard** | numeric target; range if the spec gives one, otherwise ≥ 0 when the name or unit implies a quantity that can't be negative (price, area, count, weight, ...) |
+| target ≥ 0 | **hard** | numeric target whose name or unit implies a quantity that can't be negative (price, area, count, weight, ...) |
+| target in expected range | soft | the spec gives `expected_range`. *Changed after the real-data run:* this rule was hard, and an LLM-guessed 100–5000 "USD" range excluded every laptop row whose currency was unstated. |
+
+**Spec/data mismatch:** if more than 50% of non-null values break a soft range or category rule, the rule is treated as wrong (unit, currency or vocabulary mismatch), not the rows. No row is penalised, and the mismatch is listed as a critical issue (`needs_review`) for the user to resolve.
 | feature ≥ 0 | **hard** | numeric feature that can't be negative (same token list, `config.validation.nonnegative_tokens`) |
 | required feature not null | soft | `required=True` |
 | feature in expected range | soft | the spec gives `expected_range` |

@@ -20,7 +20,9 @@ import polars as pl
 from dsagent.config import IntegrationConfig
 from dsagent.schemas.source import SourceCandidate
 from dsagent.schemas.spec import DatasetSpec, Feature
-from dsagent.stages.integration.normalise import ColumnReport, is_missing, normalise_column, parse_number
+from dsagent.stages.integration.normalise import (
+    ColumnReport, is_missing, looks_numeric, normalise_column, parse_number,
+)
 from dsagent.text import norm
 
 PROVENANCE_COLS = ["_row_ref", "_source_id", "_method", "_source_trust", "_retrieved_at"]
@@ -100,6 +102,47 @@ def union_sources(
     feature_cols = [spec.target.name, *spec.feature_names()]
     extras = sorted(c for c in table.columns if c.startswith("x_"))
     return table.select(feature_cols + extras + PROVENANCE_COLS), reports
+
+
+def reconcile_dtypes(spec: DatasetSpec, sources: list[SourceTable]) -> tuple[DatasetSpec, list[str]]:
+    """Check each numeric-declared feature against its real values across all sources.
+
+    If most non-missing values are not numbers, the spec's dtype is contradicted by the
+    data and the feature is treated as a category (reported). Found on real data: the
+    requirement analyser once declared `locality` and `property_type` as float, which
+    silently turned 1,254 values into nulls.
+    """
+    notes: list[str] = []
+    fixed: dict[str, str] = {}
+    for f in [spec.target, *spec.features]:
+        if f.dtype not in ("int", "float"):
+            continue
+        present = parsed = 0
+        for s in sources:
+            col = s.candidate.feature_map.get(f.name)
+            if col is None or col not in s.df.columns:
+                continue
+            for v in s.df[col].to_list():
+                if is_missing(v):
+                    continue
+                present += 1
+                parsed += looks_numeric(v)
+        if present and parsed / present < 0.5:
+            if f is spec.target and spec.task_type == "regression":
+                notes.append(f"target '{f.name}': only {parsed}/{present} values are numeric; "
+                             "regression target left as declared (values become null and are reported)")
+                continue
+            fixed[f.name] = "category"
+            notes.append(f"{f.name}: spec says {f.dtype}, but {present - parsed}/{present} values are "
+                         "not numbers; treated as category")
+    if not fixed:
+        return spec, notes
+    feats = [f.model_copy(update={"dtype": fixed[f.name], "unit": None, "expected_range": None})
+             if f.name in fixed else f for f in spec.features]
+    target = spec.target
+    if target.name in fixed:
+        target = target.model_copy(update={"dtype": "category", "unit": None, "expected_range": None})
+    return spec.model_copy(update={"features": feats, "target": target}), notes
 
 
 def source_unit_conflicts(reports: list[ColumnReport]) -> list[str]:

@@ -79,6 +79,16 @@ class RelevanceConfig(BaseModel):
     id_unique_ratio: float = 0.95
     leakage_r2: float = 0.98
     leakage_auc: float = 0.99
+    pair_leakage_r2: float = 0.98  # log(target) ~ log(a) + log(b): target = a*b or a = target/b
+    near_constant_share: float = 0.99
+    holdout_share: float = 0.2  # final test split, untouched until the single final score
+    permutation_repeats: int = 5
+    semantic_neutral: float = 0.5  # used when no LLM is available (reported)
+    lgbm_params: dict = Field(default_factory=lambda: {
+        "n_estimators": 200, "learning_rate": 0.05, "num_leaves": 31,
+        "min_child_samples": 10, "subsample": 0.9, "subsample_freq": 1,
+        "colsample_bytree": 0.9, "verbose": -1,
+    })
 
 
 class SelectionConfig(BaseModel):
@@ -153,6 +163,9 @@ class ValidationConfig(BaseModel):
     soft_penalty: float = 0.8  # validation_factor multiplier per failed soft check
     outlier_iqr_k: float = 3.0  # flag (never delete) values beyond Q1-k*IQR / Q3+k*IQR
     max_excluded_share: float = 0.3  # more rows excluded than this -> needs review
+    # A soft range/vocabulary rule broken by more than this share of non-null values is
+    # treated as a spec/data mismatch (unit, currency, vocabulary), not as bad rows.
+    rule_mismatch_share: float = 0.5
     agreement_confirmed: float = 1.0
     agreement_single: float = 0.9
     agreement_disagree: float = 0.6

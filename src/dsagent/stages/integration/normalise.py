@@ -70,8 +70,32 @@ def unit_key(u: Optional[str]) -> Optional[str]:
         return None
     k = norm(u).replace("square_feet", "sqft").replace("square_meter", "sqm").replace("square_metre", "sqm")
     k = {"sq_feet": "sqft", "sq_meter": "sqm", "sq_metre": "sqm", "kilogram": "kg",
-         "kilograms": "kg", "pounds": "lbs"}.get(k, k)
+         "kilograms": "kg", "pounds": "lb", "sq_ft": "sqft", "sq_m": "sqm", "sq_yd": "sqyd",
+         "m2": "sqm", "ft2": "sqft", "sqfeet": "sqft", "sqyard": "sqyd",
+         # one canonical spelling per unit, so 'kg' and 'kgs' are not reported as mixed units
+         "kgs": "kg", "lbs": "lb", "inches": "inch", "in": "inch", "miles": "mi"}.get(k, k)
     return k
+
+
+def _parse_maybe_sum(v: Any, cfg: IntegrationConfig) -> tuple[Optional[float], Optional[str]]:
+    """'256GB SSD + 1TB HDD' -> (1280, 'gb'). Only when every part parses and the units
+    are compatible; anything else ('4+ years', '+91 ...') falls back to parse_number."""
+    s = str(v)
+    if "+" not in s:
+        return parse_number(v)
+    parts = [parse_number(p) for p in s.split("+")]
+    if len(parts) < 2 or any(x is None for x, _ in parts):
+        return parse_number(v)
+    base = next((unit_key(u) for _, u in parts if u), None)
+    total = 0.0
+    for x, u in parts:
+        if u and base and unit_key(u) != base:
+            y, _ = convert(x, u, base, cfg)
+            if y is None:
+                return parse_number(v)
+            x = y
+        total += x
+    return total, base
 
 
 def currency_of(u: Optional[str]) -> Optional[str]:
@@ -138,6 +162,31 @@ def parse_number(v: Any) -> tuple[Optional[float], Optional[str]]:
     if found_unit is None and pre and pre[-1] in _CURRENCY_SYMBOLS:
         found_unit = _CURRENCY_SYMBOLS[pre[-1]]
     return value, found_unit
+
+
+_NUMERIC_WORDS = set(_MULT) | set(_CURRENCY_SYMBOLS) | set(_UNITS) | {
+    "sq", "ft", "feet", "square", "metre", "meter", "rs", "approx", "about", "ssd", "hdd",
+    "flash", "storage", "emmc", "ram",
+    # count / measurement words that commonly follow a number
+    "bhk", "rk", "bed", "beds", "bedroom", "bedrooms", "bath", "baths", "bathroom", "bathrooms",
+    "room", "rooms", "year", "years", "yr", "yrs", "month", "months", "day", "days", "hour",
+    "hours", "hr", "hrs", "min", "mins", "kms", "pcs", "units", "unit", "cores", "core", "ghz",
+    "mhz", "mp", "mah", "w", "watt", "watts", "cc", "kmpl", "nos", "persons", "people"}
+
+
+def looks_numeric(v: Any) -> bool:
+    """Stricter than parse_number, for deciding a column's type: '65 Lac', '₹ 7,000,000',
+    '1,450 Sq. Ft.', '8GB' are numeric; 'Rohini Sector-25' is not (it merely contains a number)."""
+    if is_missing(v):
+        return False
+    if isinstance(v, (int, float)) and not isinstance(v, bool):
+        return True
+    x, _ = parse_number(v)
+    if x is None:
+        return False
+    rest = re.sub(r"[-+]?\d*\.?\d+(?:[eE][-+]?\d+)?", " ", str(v).lower())
+    words = [w for w in re.findall(r"[a-z]+", rest) if w not in _NUMERIC_WORDS]
+    return not words
 
 
 def convert(value: float, from_u: Optional[str], to_u: Optional[str], cfg: IntegrationConfig) -> tuple[Optional[float], str]:
@@ -215,12 +264,14 @@ def normalise_column(
                 out.append(None)
                 rep.missing += 1
                 continue
-            x, u = parse_number(v)
+            x, u = _parse_maybe_sum(v, cfg)
             if x is None:
                 out.append(None)
                 rep.failed += 1
                 continue
             u = u or col_unit
+            if u and unit_key(u) in _UNITS:
+                u = unit_key(u)
             if u:
                 seen_units[u] = seen_units.get(u, 0) + 1
             if target_unit and u:

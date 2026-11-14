@@ -20,12 +20,13 @@ Extra dependency groups (installed when the matching stage is built): `.[data]` 
 | Repo skeleton, config (`src/dsagent/config.py`) | done |
 | Pydantic contracts (`src/dsagent/schemas/`) | done, tested |
 | LLM wrapper + call cache + budget (`src/dsagent/llm/`) | done, tested with a fake backend |
-| Hand-downloaded case-study data (`data/README.md`) | instructions written; files not yet downloaded |
+| Real case-study data (`data/sources.json`) | laptops (HF, Apache-2.0) + Delhi (GitHub re-upload, no licence) downloaded; see `docs/REAL_DATA_RUN_2026-11-14.md` |
 | Stage 1 requirement analyser (`src/dsagent/stages/requirement.py`) | done, tested; E1 run with 2 models (F1 0.739 / 0.724, see `docs/MODEL_CHOICE.md`) |
 | Stage 2 source discovery (`src/dsagent/stages/discovery/`) | done, tested; live dry runs on Delhi houses and laptops (`eval/run_discovery.py`) |
-| Stage 4 integration (`src/dsagent/stages/integration/`) | done, tested on fixtures; not yet run on real data |
-| Stage 5 validation (`src/dsagent/stages/validation.py`) | done, tested (97 tests total) |
-| Stage 7 relevance engine + recency weighting (Stage 6) | next |
+| Stage 4 integration (`src/dsagent/stages/integration/`) | done; run on real data (5 real-data bugs fixed) |
+| Stage 5 validation (`src/dsagent/stages/validation.py`) | done; run on real data |
+| Stage 6 recency + Stage 7 relevance engine (`src/dsagent/stages/recency.py`, `relevance/`) | done; run end-to-end on real laptop + Delhi data (111 tests total) |
+| Stages 3 (acquisition agents) + LangGraph orchestration (weeks 8-9) | next |
 
 ## Rules that the code enforces
 - All LLM calls go through `dsagent.llm.LLMClient.structured()`. It uses a Pydantic output schema, retries then rejects invalid output, and uses the SQLite call cache and the run budget.

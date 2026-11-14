@@ -1,0 +1,38 @@
+[
+  {
+    "source_id": "hf_laptops_train",
+    "title": "Laptop prices (Ammok/laptop_price_prediction, train file)",
+    "path": "raw/laptops_train.csv",
+    "url": "https://huggingface.co/datasets/Ammok/laptop_price_prediction",
+    "kind": "file",
+    "role": "entity",
+    "authority_class": "community",
+    "licence": "apache-2.0",
+    "last_updated": "2024-02-18T07:18:26Z",
+    "notes": "Price currency not stated on the dataset page."
+  },
+  {
+    "source_id": "hf_laptops_test",
+    "title": "Laptop prices (Ammok/laptop_price_prediction, test file)",
+    "path": "raw/laptops_test.csv",
+    "url": "https://huggingface.co/datasets/Ammok/laptop_price_prediction",
+    "kind": "file",
+    "role": "entity",
+    "authority_class": "community",
+    "licence": "apache-2.0",
+    "last_updated": "2024-02-18T07:18:26Z",
+    "notes": "Second file of the same dataset."
+  },
+  {
+    "source_id": "delhi_magicbricks",
+    "title": "Delhi house prices (MagicBricks scrape, GitHub re-upload of the Kaggle file)",
+    "path": "raw/delhi_magicbricks.csv",
+    "url": "https://github.com/SUKHMAN-SINGH-1612/Data-Science-Projects",
+    "kind": "file",
+    "role": "entity",
+    "authority_class": "community",
+    "licence": null,
+    "region": "Delhi",
+    "notes": "No licence stated; private testing only. Per_Sqft = Price / Area (leakage test E10)."
+  }
+]

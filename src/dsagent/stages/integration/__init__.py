@@ -26,7 +26,9 @@ from dsagent.stages.integration.dedupe import DedupeReport, dedupe
 from dsagent.stages.integration.enrich import EnrichReport, key_join, nearest_distance
 from dsagent.stages.integration.impute import ColumnPlan, plan_imputation
 from dsagent.stages.integration.normalise import ColumnReport
-from dsagent.stages.integration.union import PROVENANCE_COLS, SourceTable, source_unit_conflicts, union_sources
+from dsagent.stages.integration.union import (
+    PROVENANCE_COLS, SourceTable, reconcile_dtypes, source_unit_conflicts, union_sources,
+)
 
 
 @dataclass
@@ -62,6 +64,7 @@ class IntegrationReport:
 class IntegrationResult:
     table: pl.DataFrame
     report: IntegrationReport
+    spec: DatasetSpec  # spec after data-driven dtype corrections; use this downstream
 
     def write(self, out_dir: Path) -> dict[str, Path]:
         out_dir.mkdir(parents=True, exist_ok=True)
@@ -82,6 +85,8 @@ def integrate(
     cfg = settings.integration
     warnings: list[str] = []
 
+    spec, dtype_notes = reconcile_dtypes(spec, entity_sources)
+    warnings += [f"dtype corrected: {n}" for n in dtype_notes]
     table, col_reports = union_sources(spec, entity_sources, cfg)
     rows_after_union = table.height
     for r in col_reports:
@@ -134,4 +139,4 @@ def integrate(
         lineage=lineage,
         warnings=warnings,
     )
-    return IntegrationResult(table=table, report=report)
+    return IntegrationResult(table=table, report=report, spec=spec)

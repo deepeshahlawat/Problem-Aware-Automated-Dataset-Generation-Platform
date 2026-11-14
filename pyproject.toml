@@ -28,7 +28,8 @@ data = [
 ml = [
     "scikit-learn>=1.5",
     "lightgbm>=4.3",
-    "shap>=0.45",
+    # SHAP values come from LightGBM itself (predict(pred_contrib=True), TreeSHAP),
+    # so the heavy `shap` package is not needed.
 ]
 dev = [
     "pytest>=8",
@@ -39,4 +40,5 @@ packages = ["src/dsagent"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = ["tests"]
 addopts = "-q"

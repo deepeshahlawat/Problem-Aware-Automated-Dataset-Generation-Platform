@@ -98,13 +98,17 @@ def build_contract(spec: DatasetSpec, settings: Settings | None = None) -> list[
     t = spec.target
     rules.append(Rule(column=t.name, check="not_null", severity="hard", reason="target is required"))
     if t.dtype in ("int", "float"):
-        if t.expected_range:
-            rules.append(Rule(column=t.name, check="in_range", severity="hard",
-                              params={"min": t.expected_range.min, "max": t.expected_range.max},
-                              reason="target outside the spec's expected range"))
-        elif _nonnegative(t, settings):
+        # Hard rules are reserved for impossible values. Expected ranges come from the
+        # requirement analyser (an LLM's guess, unit included), so they are soft: a wrong
+        # guess must never delete data. Found on real data: a 100-5000 'USD' guess
+        # against prices in an unstated currency excluded every row.
+        if _nonnegative(t, settings):
             rules.append(Rule(column=t.name, check="ge", severity="hard", params={"min": 0},
                               reason="target cannot be negative"))
+        if t.expected_range:
+            rules.append(Rule(column=t.name, check="in_range", severity="soft",
+                              params={"min": t.expected_range.min, "max": t.expected_range.max},
+                              reason="target outside the spec's expected range"))
     for f in spec.features:
         if f.required:
             rules.append(Rule(column=f.name, check="not_null", severity="soft",
@@ -182,6 +186,7 @@ def validate(
     hard_reasons: dict[int, list[str]] = {}
     soft_fails: dict[int, list[str]] = {}
     failures: dict[tuple[str, str, str], list[str]] = {}
+    rows_by_rule: dict[tuple[str, str, str], list[int]] = {}
     for severity in ("hard", "soft"):
         sub = [r for r in rules if r.severity == severity]
         fc = _run(_schema(sub, table.columns), table)
@@ -190,9 +195,29 @@ def validate(
             if idx is None:
                 critical.append(f"{col}: {chk} (column-level)")
                 continue
-            failures.setdefault((col, chk, severity), []).append(str(row.get("failure_case")))
-            target = hard_reasons if severity == "hard" else soft_fails
-            target.setdefault(int(idx), []).append(f"{col}:{chk}")
+            key = (col, chk, severity)
+            failures.setdefault(key, []).append(str(row.get("failure_case")))
+            rows_by_rule.setdefault(key, []).append(int(idx))
+
+    # A soft range / vocabulary rule broken by most rows says more about the rule than
+    # about the rows (wrong unit, currency or category vocabulary in the spec). Such rules
+    # don't penalise rows; they are reported for the user to resolve.
+    mismatches: list[str] = []
+    for (col, chk, sev), idxs in rows_by_rule.items():
+        if sev == "soft" and chk != "not_null" and col in table.columns:
+            present = n - table[col].null_count()
+            share = len(idxs) / present if present else 0.0
+            if share > v.rule_mismatch_share:
+                unit = next((f.unit for f in [spec.target, *spec.features] if f.name == col), None)
+                kind = "values" if chk.startswith("isin") else f"values (unit {unit or 'unstated'})"
+                mismatches.append(
+                    f"{col}: {share:.0%} of {kind} break '{chk}': the spec's expectation probably "
+                    f"doesn't match this data (unit/currency/vocabulary); confirm before use")
+                continue
+        target = hard_reasons if sev == "hard" else soft_fails
+        for i in idxs:
+            target.setdefault(i, []).append(f"{col}:{chk}")
+    critical += mismatches
 
     # --- outliers (flag only) ------------------------------------------------------------
     flags: dict[int, list[str]] = {i: [f"soft:{s}" for s in soft_fails.get(i, [])] for i in range(n)}

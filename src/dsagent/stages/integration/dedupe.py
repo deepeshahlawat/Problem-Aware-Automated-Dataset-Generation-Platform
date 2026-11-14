@@ -1,12 +1,16 @@
 """Duplicate removal (Stage 4 step 4).
 
-1. Exact duplicates on the canonical feature columns (provenance ignored).
-2. Near-duplicates (re-posted listings) via MinHash LSH over a canonical record
-   signature: categorical values as words, numbers rounded to N significant digits.
+1. Exact duplicates on all collected columns (provenance ignored).
+2. Near-duplicate *candidates* via MinHash LSH over a record signature built from every
+   collected column except the target (categorical values as words, numbers rounded to
+   N significant digits). Extras such as a model name are included on purpose.
+3. A candidate is merged only if its target agrees with the kept row (within tolerance).
+   Candidates whose targets disagree are KEPT: identical-looking records at different
+   prices are often genuinely different items (found on real laptop data, where 192 rows
+   were wrongly merged by a spec-columns-only signature). If they come from different
+   sources, both rows are marked 'disagree' and the conflict is reported.
 
-Within a duplicate group the row from the most trusted source wins (design spec 13:
-source-trust ordering). Groups whose target values disagree beyond a tolerance are
-reported, never silently averaged.
+Within a merged group the row from the most trusted source wins (design spec 13).
 """
 
 from __future__ import annotations
@@ -52,6 +56,15 @@ def signature(row: dict, cols: list[str], sig: int) -> set[str]:
     return toks
 
 
+def _targets_agree(a, b, rel_tol: float) -> bool:
+    if a is None or b is None:
+        return True  # nothing to contradict
+    if isinstance(a, (int, float)) and isinstance(b, (int, float)) and not isinstance(a, bool):
+        lo, hi = min(a, b), max(a, b)
+        return hi == lo or (lo > 0 and (hi - lo) / lo <= rel_tol)
+    return a == b
+
+
 def _keep_best(group: list[int], trust: list[float]) -> int:
     return max(group, key=lambda i: (trust[i], -i))
 
@@ -62,6 +75,13 @@ def dedupe(
     rep = DedupeReport(rows_in=table.height)
     if table.height == 0:
         return table, rep
+    extras = [c for c in table.columns if not c.startswith("_") and c not in feature_cols]
+    # An extra column only one source has would make that source's rows look different
+    # from everyone else's; use only extras present in >= 2 sources (or all, if 1 source).
+    n_src = table["_source_id"].n_unique()
+    shared_extras = [c for c in extras
+                     if n_src == 1 or table.filter(pl.col(c).is_not_null())["_source_id"].n_unique() >= 2]
+    feature_cols = list(feature_cols) + shared_extras
     rows = table.select(feature_cols).to_dicts()
     trust = table["_source_trust"].to_list()
     refs = table["_row_ref"].to_list()
@@ -106,19 +126,19 @@ def dedupe(
             continue
         rep.groups += 1
         best = _keep_best(group, trust)
-        targets = [rows[j][target] for j in group if rows[j][target] is not None]
-        if len(targets) > 1 and isinstance(targets[0], (int, float)):
-            lo, hi = min(targets), max(targets)
-            if lo > 0 and (hi - lo) / lo > cfg.target_conflict_rel_tol:
-                rep.target_conflicts.append({
-                    "rows": [refs[j] for j in group], "target_values": targets, "kept": refs[best]})
-                disagree.add(best)
-        merged: set[str] = set()
+        merged = set(support.get(best, {srcs[best]}))
         for j in group:
-            merged |= support.get(j, {srcs[j]})
-            if j != best:
+            if j == best:
+                continue
+            if _targets_agree(rows[best][target], rows[j][target], cfg.target_conflict_rel_tol):
+                merged |= support.get(j, {srcs[j]})
                 keep.discard(j)
                 rep.near_removed += 1
+            elif srcs[j] != srcs[best]:
+                # Same-looking record, different target, different sources: keep both, flag both.
+                rep.target_conflicts.append({"rows": [refs[best], refs[j]],
+                                             "target_values": [rows[best][target], rows[j][target]]})
+                disagree.update((best, j))
         support[best] = merged
 
     for i in keep:

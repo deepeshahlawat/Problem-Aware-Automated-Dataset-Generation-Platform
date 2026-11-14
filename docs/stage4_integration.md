@@ -20,9 +20,12 @@ Built per the design spec build order (weeks 5–6): it works on hand-provided t
    - Every row gets `_row_ref`, `_source_id`, `_method`, `_source_trust` and `_retrieved_at`.
 3. **Deduplicate** (`dedupe.py`):
    - Exact duplicates are removed first.
-   - Near-duplicates are found with MinHash LSH (threshold 0.9) over a record signature: categorical words plus numbers rounded to 2 significant digits. **The target is excluded from the signature**, so a listing re-posted at a different price is still caught.
-   - The most trusted source's row is kept.
-   - Groups whose targets differ by more than 5% are **reported**, never averaged.
+   - Near-duplicate *candidates* are found with MinHash LSH (threshold 0.9) over a record signature: categorical words plus numbers rounded to 2 significant digits. The signature covers the spec features **and every extra column shared by ≥ 2 sources** (e.g. a model name). **The target is excluded**, so a re-post at a different price is still found.
+   - **A candidate is merged only if its target agrees within 5%**, and the most trusted source's row is kept.
+   - **If the targets disagree, both rows are kept.** When they come from different sources, both are flagged `disagree` and the conflict is reported.
+   - *Changed after the real-data run (2026-11-14):* the earlier version merged every candidate and wrongly removed 192 laptops, because different models share identical spec columns at different prices.
+   - Types are checked against the data (`reconcile_dtypes`). If the spec declares a feature numeric but most values aren't numbers ("Rohini Sector-25" contains a number but isn't one), the feature is treated as a category. The correction is reported, and Stages 5–7 use the corrected spec (`IntegrationResult.spec`).
+   - `A + B` values with compatible units are summed (`256GB SSD + 1TB HDD` → 1280 GB). Unit spellings are canonical (`kgs` → `kg`).
 4. **Enrich** (`enrich.py`). Exact, auditable joins:
    - **key join**: by normalised key, with an optional alias table. Unmatched keys are listed and never fuzzy-guessed.
    - **nearest point**: haversine distance in km to the nearest context point (e.g. metro stations). Lineage records it as `derived:<source>`.

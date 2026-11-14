@@ -130,3 +130,18 @@ def test_stage4_to_stage5_hand_off():
     res = validate(integ.table, spec, integ.report.dedupe.agreement, S)
     assert res.excluded["_row_ref"].to_list() == ["s:1"]  # negative price from the raw file
     assert res.report.status == "passed"
+
+
+def test_spec_range_in_wrong_unit_is_reported_not_used_to_delete_rows():
+    # Real-data regression: the LLM guessed 100-5000 'USD' for laptop prices, the data
+    # holds millions in an unstated currency. No row may be excluded or penalised.
+    spec = SPEC.model_copy(update={
+        "target": F("price", unit="USD", expected_range=ValueRange(min=100, max=5000)),
+        "features": [F("area_sqft", unit="sqft")], "min_rows": 3})
+    t = table(n_extra=8).filter(pl.col("price").is_not_null() & (pl.col("price") > 0))
+    res = validate(t, spec, settings=S)
+    assert res.report.rows_excluded == 0
+    assert not any("price:in_range" in f for flags in res.table["_flags"].to_list() for f in flags)
+    assert res.report.status == "needs_review"
+    assert any("price" in c and "probably" in c for c in res.report.critical)
+    assert {r.check: r.severity for r in build_contract(spec, S) if r.column == "price"}["in_range"] == "soft"
