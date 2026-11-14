@@ -27,6 +27,9 @@ class DedupeReport:
     near_removed: int = 0
     groups: int = 0
     target_conflicts: list[dict] = field(default_factory=list)
+    # kept _row_ref -> "confirmed" (same record from >= 2 independent sources, targets
+    # agree) or "disagree" (targets differ beyond tolerance). Feeds row confidence (13.3).
+    agreement: dict[str, str] = field(default_factory=dict)
 
 
 def _round_sig(x: float, sig: int) -> float:
@@ -62,6 +65,9 @@ def dedupe(
     rows = table.select(feature_cols).to_dicts()
     trust = table["_source_trust"].to_list()
     refs = table["_row_ref"].to_list()
+    srcs = table["_source_id"].to_list()
+    support: dict[int, set[str]] = {}  # kept row -> sources that contained this record
+    disagree: set[int] = set()
 
     # 1. exact duplicates
     first: dict[tuple, list[int]] = {}
@@ -69,7 +75,9 @@ def dedupe(
         first.setdefault(tuple(r[c] for c in feature_cols), []).append(i)
     keep = set()
     for idxs in first.values():
-        keep.add(_keep_best(idxs, trust))
+        best = _keep_best(idxs, trust)
+        keep.add(best)
+        support[best] = {srcs[i] for i in idxs}
         rep.exact_removed += len(idxs) - 1
 
     # 2. near duplicates among the survivors (signature excludes the target so that
@@ -104,10 +112,20 @@ def dedupe(
             if lo > 0 and (hi - lo) / lo > cfg.target_conflict_rel_tol:
                 rep.target_conflicts.append({
                     "rows": [refs[j] for j in group], "target_values": targets, "kept": refs[best]})
+                disagree.add(best)
+        merged: set[str] = set()
         for j in group:
+            merged |= support.get(j, {srcs[j]})
             if j != best:
                 keep.discard(j)
                 rep.near_removed += 1
+        support[best] = merged
+
+    for i in keep:
+        if i in disagree:
+            rep.agreement[refs[i]] = "disagree"
+        elif len(support.get(i, ())) >= 2:
+            rep.agreement[refs[i]] = "confirmed"
 
     mask = pl.Series([i in keep for i in range(table.height)])
     return table.filter(mask), rep

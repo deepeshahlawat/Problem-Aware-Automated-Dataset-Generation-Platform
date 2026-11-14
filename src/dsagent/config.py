@@ -147,6 +147,26 @@ class IntegrationConfig(BaseModel):
     missing_category: str = "__missing__"
 
 
+class ValidationConfig(BaseModel):
+    """Stage 5 (design spec sections 10, 13.2, 13.3)."""
+
+    soft_penalty: float = 0.8  # validation_factor multiplier per failed soft check
+    outlier_iqr_k: float = 3.0  # flag (never delete) values beyond Q1-k*IQR / Q3+k*IQR
+    max_excluded_share: float = 0.3  # more rows excluded than this -> needs review
+    agreement_confirmed: float = 1.0
+    agreement_single: float = 0.9
+    agreement_disagree: float = 0.6
+    trust_band_high: float = 0.7
+    trust_band_medium: float = 0.4
+    # Numeric features whose name or unit contains one of these can never be negative.
+    nonnegative_tokens: list[str] = Field(default_factory=lambda: [
+        "price", "cost", "salary", "income", "area", "size", "sqft", "sqm", "weight", "kg",
+        "age", "years", "distance", "km", "count", "num", "number", "bedroom", "bathroom",
+        "room", "ram", "storage", "gb", "inches", "inch", "hours", "rainfall", "mm", "yield",
+        "inr", "usd", "eur", "floor", "parking", "tonnes", "hectare",
+    ])
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_prefix="DSAGENT_", env_file=".env", env_file_encoding="utf-8", extra="ignore"
@@ -181,6 +201,7 @@ class Settings(BaseSettings):
     recency: RecencyConfig = Field(default_factory=RecencyConfig)
     discovery: DiscoveryConfig = Field(default_factory=DiscoveryConfig)
     integration: IntegrationConfig = Field(default_factory=IntegrationConfig)
+    validation: ValidationConfig = Field(default_factory=ValidationConfig)
     source_manifest_path: Path = Path("data/sources.json")
     context_registry_path: Path = Path("configs/context_sources.json")
 

@@ -23,8 +23,9 @@ Extra dependency groups (installed when the matching stage is built): `.[data]` 
 | Hand-downloaded case-study data (`data/README.md`) | instructions written; files not yet downloaded |
 | Stage 1 requirement analyser (`src/dsagent/stages/requirement.py`) | done, tested; E1 run with 2 models (F1 0.739 / 0.724, see `docs/MODEL_CHOICE.md`) |
 | Stage 2 source discovery (`src/dsagent/stages/discovery/`) | done, tested; live dry runs on Delhi houses and laptops (`eval/run_discovery.py`) |
-| Stage 4 integration (`src/dsagent/stages/integration/`) | done, tested on fixtures (88 tests total); not yet run on real data |
-| Stage 5 validation (Pandera contracts, quality report) | next |
+| Stage 4 integration (`src/dsagent/stages/integration/`) | done, tested on fixtures; not yet run on real data |
+| Stage 5 validation (`src/dsagent/stages/validation.py`) | done, tested (97 tests total) |
+| Stage 7 relevance engine + recency weighting (Stage 6) | next |
 
 ## Rules that the code enforces
 - All LLM calls go through `dsagent.llm.LLMClient.structured()`. It uses a Pydantic output schema, retries then rejects invalid output, and uses the SQLite call cache and the run budget.

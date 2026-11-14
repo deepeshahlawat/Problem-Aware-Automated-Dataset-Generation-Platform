@@ -132,6 +132,20 @@ def test_dedupe_exact_and_near_duplicates_with_trust_ordering():
     assert rep.target_conflicts and rep.target_conflicts[0]["kept"] == "a:0"
 
 
+def test_dedupe_records_cross_source_agreement():
+    t, _ = union_sources(SPEC, sources(), CFG)
+    cols = [SPEC.target.name, *SPEC.feature_names()]
+    _, rep = dedupe(t, cols, "price", CFG)
+    assert rep.agreement["a:0"] == "disagree"      # Rohini: 65 Lac (a) vs 70 Lac (b)
+    assert "a:2" not in rep.agreement              # Dwarka duplicates come from one source only
+
+    same_price = sources()
+    same_price[1].df = same_price[1].df.with_columns(pl.Series("cost", ["65 Lac", "₹ 9,500,000"]))
+    t2, _ = union_sources(SPEC, same_price, CFG)
+    _, rep2 = dedupe(t2, cols, "price", CFG)
+    assert rep2.agreement["a:0"] == "confirmed"     # identical record from two sources
+
+
 def test_distinct_rows_are_not_merged():
     t, _ = union_sources(SPEC, sources(), CFG)
     out, _ = dedupe(t, [SPEC.target.name, *SPEC.feature_names()], "price", CFG)
