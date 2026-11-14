@@ -130,6 +130,23 @@ class DiscoveryConfig(BaseModel):
     hf_search_limit: int = 8
 
 
+class IntegrationConfig(BaseModel):
+    """Stage 4 (design spec section 10, decisions D2/D3)."""
+
+    # Currency conversion runs ONLY with a configured rate. Rates are units of
+    # `currency_base` per 1 unit of the currency, with the date they were taken.
+    # Example: {"EUR": 1.08, "INR": 0.012} with currency_rates_as_of="2026-11-14".
+    currency_base: str = "USD"
+    currency_rates: dict[str, float] = Field(default_factory=dict)
+    currency_rates_as_of: Optional[str] = None
+    near_dup_threshold: float = 0.9
+    minhash_perm: int = 128
+    signature_round_sig: int = 2  # significant digits for numeric values in the signature
+    target_conflict_rel_tol: float = 0.05  # duplicates whose targets differ more are flagged
+    max_impute_share: float = 0.4  # above this missing share a column is left null
+    missing_category: str = "__missing__"
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_prefix="DSAGENT_", env_file=".env", env_file_encoding="utf-8", extra="ignore"
@@ -163,6 +180,7 @@ class Settings(BaseSettings):
     selection: SelectionConfig = Field(default_factory=SelectionConfig)
     recency: RecencyConfig = Field(default_factory=RecencyConfig)
     discovery: DiscoveryConfig = Field(default_factory=DiscoveryConfig)
+    integration: IntegrationConfig = Field(default_factory=IntegrationConfig)
     source_manifest_path: Path = Path("data/sources.json")
     context_registry_path: Path = Path("configs/context_sources.json")
 
