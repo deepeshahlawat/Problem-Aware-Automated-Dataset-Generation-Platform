@@ -14,7 +14,10 @@ class FeasibilityItem(BaseModel):
     feature: str
     status: Literal["found", "partial", "derivable", "not_found"]
     sources: list[str]
-    coverage: float = Field(ge=0, le=1, description="Fraction of rows with a value")
+    coverage: Optional[float] = Field(
+        default=None, ge=0, le=1,
+        description="Fraction of rows with a value; None = known only after the join (derivable)",
+    )
     newest_date: Optional[datetime] = None
     trust: Optional[float] = Field(default=None, ge=0, le=1)
     note: str = ""

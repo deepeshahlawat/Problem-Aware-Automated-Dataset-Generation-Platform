@@ -1,0 +1,93 @@
+[
+  {
+    "source_id": "osm_transit_stations",
+    "title": "OpenStreetMap: rail/metro/subway stations in the spec region (Overpass API)",
+    "url": "https://overpass-api.de/api/interpreter",
+    "kind": "api",
+    "role": "context",
+    "authority_class": "academic_or_open_repo",
+    "licence": "ODbL-1.0",
+    "region": null,
+    "provides": [
+      "distance_to_metro_km",
+      "distance_to_transit_km",
+      "nearest_station"
+    ],
+    "join_keys_any": [
+      [
+        "latitude",
+        "longitude"
+      ],
+      [
+        "locality"
+      ]
+    ],
+    "notes": "Region-agnostic: Overpass query for railway=station (incl. station=subway) inside the spec region's boundary. Distance is derived (method=derived); locality joins need geocoding first."
+  },
+  {
+    "source_id": "osm_amenities",
+    "title": "OpenStreetMap: schools, hospitals, parks, shops around each location (Overpass API)",
+    "url": "https://overpass-api.de/api/interpreter",
+    "kind": "api",
+    "role": "context",
+    "authority_class": "academic_or_open_repo",
+    "licence": "ODbL-1.0",
+    "region": null,
+    "provides": [
+      "amenities_count",
+      "schools_within_1km",
+      "hospitals_within_2km",
+      "parks_within_1km"
+    ],
+    "join_keys_any": [
+      [
+        "latitude",
+        "longitude"
+      ],
+      [
+        "locality"
+      ]
+    ],
+    "notes": "Region-agnostic: counts of OSM POIs around each record's coordinates or locality centroid (derived)."
+  },
+  {
+    "source_id": "delhi_circle_rates",
+    "title": "Delhi Revenue Department: circle rates by colony category (A-H)",
+    "url": "https://revenue.delhi.gov.in",
+    "kind": "html_table",
+    "role": "context",
+    "authority_class": "official",
+    "licence": "Government of India open data (GODL)",
+    "region": "Delhi",
+    "provides": [
+      "circle_rate_category",
+      "circle_rate_per_sqm",
+      "locality_price_level"
+    ],
+    "join_keys_any": [
+      [
+        "locality"
+      ]
+    ],
+    "notes": "Official minimum valuation per colony category. Published as PDF/HTML; same colony name can be in different categories in different districts. Licence to be confirmed on the page."
+  },
+  {
+    "source_id": "nominatim_geocoding",
+    "title": "OpenStreetMap Nominatim: locality name -> coordinates",
+    "url": "https://nominatim.openstreetmap.org/search",
+    "kind": "api",
+    "role": "context",
+    "authority_class": "academic_or_open_repo",
+    "licence": "ODbL-1.0",
+    "provides": [
+      "latitude",
+      "longitude"
+    ],
+    "join_keys_any": [
+      [
+        "locality"
+      ]
+    ],
+    "notes": "Usage policy: max 1 request/second, cache results, identify the application."
+  }
+]

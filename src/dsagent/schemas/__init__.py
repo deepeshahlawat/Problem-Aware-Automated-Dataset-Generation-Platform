@@ -1,5 +1,5 @@
 from dsagent.schemas.report import ColumnRelevance, FeasibilityItem, RunSummary
-from dsagent.schemas.source import Provenance, SourceCandidate
+from dsagent.schemas.source import Provenance, SourceCandidate, SourceDescriptor
 from dsagent.schemas.spec import DatasetSpec, Feature, TemporalPolicy, ValueRange
 
 __all__ = [
@@ -10,6 +10,7 @@ __all__ = [
     "Provenance",
     "RunSummary",
     "SourceCandidate",
+    "SourceDescriptor",
     "TemporalPolicy",
     "ValueRange",
 ]

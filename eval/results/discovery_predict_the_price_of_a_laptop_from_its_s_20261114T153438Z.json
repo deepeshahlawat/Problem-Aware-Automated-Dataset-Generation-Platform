@@ -1,0 +1,584 @@
+{
+  "problem": "Predict the price of a laptop from its specifications",
+  "spec": {
+    "problem_text": "Predict the price of a laptop from its specifications",
+    "task_type": "regression",
+    "target": {
+      "name": "price_usd",
+      "dtype": "float",
+      "unit": "USD",
+      "description": "Retail price of the laptop",
+      "required": true,
+      "expected_range": {
+        "min": 100.0,
+        "max": 5000.0
+      },
+      "allowed_values": null
+    },
+    "features": [
+      {
+        "name": "brand",
+        "dtype": "category",
+        "unit": null,
+        "description": "Laptop manufacturer brand",
+        "required": true,
+        "expected_range": null,
+        "allowed_values": [
+          "Apple",
+          "Dell",
+          "HP",
+          "Lenovo",
+          "ASUS",
+          "Acer",
+          "MSI",
+          "Samsung",
+          "LG",
+          "Razer",
+          "Microsoft"
+        ]
+      },
+      {
+        "name": "processor_model",
+        "dtype": "category",
+        "unit": null,
+        "description": "CPU model, e.g. Intel Core i5/i7, AMD Ryzen 5/7, Apple M1/M2",
+        "required": true,
+        "expected_range": null,
+        "allowed_values": null
+      },
+      {
+        "name": "ram_gb",
+        "dtype": "int",
+        "unit": "GB",
+        "description": "Installed system memory capacity",
+        "required": true,
+        "expected_range": {
+          "min": 4.0,
+          "max": 64.0
+        },
+        "allowed_values": null
+      },
+      {
+        "name": "storage_gb",
+        "dtype": "int",
+        "unit": "GB",
+        "description": "Primary storage capacity",
+        "required": true,
+        "expected_range": {
+          "min": 64.0,
+          "max": 2048.0
+        },
+        "allowed_values": null
+      },
+      {
+        "name": "storage_type",
+        "dtype": "category",
+        "unit": null,
+        "description": "Primary storage technology",
+        "required": false,
+        "expected_range": null,
+        "allowed_values": [
+          "SSD",
+          "HDD",
+          "eMMC"
+        ]
+      },
+      {
+        "name": "screen_size_inches",
+        "dtype": "float",
+        "unit": "inches",
+        "description": "Display diagonal size",
+        "required": true,
+        "expected_range": {
+          "min": 10.1,
+          "max": 17.3
+        },
+        "allowed_values": null
+      },
+      {
+        "name": "display_resolution",
+        "dtype": "category",
+        "unit": null,
+        "description": "Native display resolution in pixels",
+        "required": false,
+        "expected_range": null,
+        "allowed_values": [
+          "1366x768",
+          "1600x900",
+          "1920x1080",
+          "1920x1200",
+          "2560x1440",
+          "3840x2160"
+        ]
+      },
+      {
+        "name": "graphics_processor",
+        "dtype": "category",
+        "unit": null,
+        "description": "Graphics processor model, e.g. integrated Intel/AMD graphics or dedicated NVIDIA/AMD GPU",
+        "required": true,
+        "expected_range": null,
+        "allowed_values": null
+      },
+      {
+        "name": "operating_system",
+        "dtype": "category",
+        "unit": null,
+        "description": "Pre-installed operating system",
+        "required": false,
+        "expected_range": null,
+        "allowed_values": [
+          "Windows",
+          "macOS",
+          "ChromeOS",
+          "Linux"
+        ]
+      },
+      {
+        "name": "weight_kg",
+        "dtype": "float",
+        "unit": "kg",
+        "description": "Laptop weight",
+        "required": false,
+        "expected_range": {
+          "min": 0.8,
+          "max": 3.5
+        },
+        "allowed_values": null
+      },
+      {
+        "name": "battery_life_hours",
+        "dtype": "float",
+        "unit": "hours",
+        "description": "Manufacturer-rated battery life",
+        "required": false,
+        "expected_range": {
+          "min": 2.0,
+          "max": 20.0
+        },
+        "allowed_values": null
+      },
+      {
+        "name": "release_year",
+        "dtype": "int",
+        "unit": "year",
+        "description": "Year of model release",
+        "required": false,
+        "expected_range": {
+          "min": 2015.0,
+          "max": 2026.0
+        },
+        "allowed_values": null
+      },
+      {
+        "name": "laptop_category",
+        "dtype": "category",
+        "unit": null,
+        "description": "Intended laptop category / market segment",
+        "required": false,
+        "expected_range": null,
+        "allowed_values": [
+          "gaming",
+          "ultrabook",
+          "business",
+          "budget",
+          "workstation",
+          "student"
+        ]
+      }
+    ],
+    "region": null,
+    "temporal": {
+      "mode": "recent_weighted",
+      "half_life_years": 5.0,
+      "window_start": null,
+      "window_end": null
+    },
+    "min_rows": 100
+  },
+  "candidates": [
+    {
+      "source_id": "hf:Ammok/laptop_price_prediction",
+      "url": "https://huggingface.co/datasets/Ammok/laptop_price_prediction",
+      "kind": "open_repo",
+      "role": "entity",
+      "title": "Ammok/laptop_price_prediction",
+      "authority_class": "community",
+      "join_key": null,
+      "covers_features": [
+        "brand",
+        "display_resolution",
+        "graphics_processor",
+        "laptop_category",
+        "operating_system",
+        "price_usd",
+        "processor_model",
+        "ram_gb",
+        "screen_size_inches",
+        "storage_gb",
+        "weight_kg"
+      ],
+      "feature_map": {
+        "operating_system": "Operating System",
+        "screen_size_inches": "Screen Size",
+        "price_usd": "Price",
+        "ram_gb": "RAM",
+        "weight_kg": "Weight",
+        "laptop_category": "Category",
+        "brand": "Manufacturer",
+        "processor_model": "CPU",
+        "storage_gb": " Storage",
+        "display_resolution": "Screen",
+        "graphics_processor": "GPU"
+      },
+      "coverage_by_feature": {
+        "operating_system": 1.0,
+        "screen_size_inches": 1.0,
+        "price_usd": 1.0,
+        "ram_gb": 1.0,
+        "weight_kg": 1.0,
+        "laptop_category": 1.0,
+        "brand": 1.0,
+        "processor_model": 1.0,
+        "storage_gb": 1.0,
+        "display_resolution": 1.0,
+        "graphics_processor": 1.0
+      },
+      "est_rows": 100,
+      "last_updated": "2024-02-18T07:18:26Z",
+      "licence": "apache-2.0",
+      "robots_allowed": true,
+      "trust_score": 0.7968,
+      "trust_components": {
+        "authority": 0.6,
+        "freshness": 0.6842,
+        "coverage": 1.0,
+        "structure": 1.0,
+        "accessibility": 1.0
+      },
+      "notes": "downloads=112; sample of 100 rows from datasets-server; llm-matched: brand, processor_model, storage_gb, display_resolution, graphics_processor"
+    },
+    {
+      "source_id": "hf:privum/ai-compute-prices",
+      "url": "https://huggingface.co/datasets/privum/ai-compute-prices",
+      "kind": "open_repo",
+      "role": "entity",
+      "title": "privum/ai-compute-prices",
+      "authority_class": "community",
+      "join_key": null,
+      "covers_features": [
+        "graphics_processor",
+        "price_usd"
+      ],
+      "feature_map": {
+        "price_usd": "price_usd_per_hour",
+        "graphics_processor": "gpu_model"
+      },
+      "coverage_by_feature": {
+        "price_usd": 1.0,
+        "graphics_processor": 1.0
+      },
+      "est_rows": 100,
+      "last_updated": "2026-11-14T00:03:00Z",
+      "licence": "cc-by-4.0",
+      "robots_allowed": true,
+      "trust_score": 0.7171,
+      "trust_components": {
+        "authority": 0.6,
+        "freshness": 1.0,
+        "coverage": 0.2857,
+        "structure": 1.0,
+        "accessibility": 1.0
+      },
+      "notes": "downloads=689; sample of 100 rows from datasets-server; llm-matched: graphics_processor"
+    },
+    {
+      "source_id": "hf:LuxDB/luxdb-luxury-price-history-sample",
+      "url": "https://huggingface.co/datasets/LuxDB/luxdb-luxury-price-history-sample",
+      "kind": "open_repo",
+      "role": "entity",
+      "title": "LuxDB/luxdb-luxury-price-history-sample",
+      "authority_class": "community",
+      "join_key": null,
+      "covers_features": [
+        "price_usd"
+      ],
+      "feature_map": {
+        "price_usd": "price_usd"
+      },
+      "coverage_by_feature": {
+        "price_usd": 0.35
+      },
+      "est_rows": 100,
+      "last_updated": "2026-11-12T07:21:12Z",
+      "licence": "cc-by-4.0",
+      "robots_allowed": true,
+      "trust_score": 0.6884,
+      "trust_components": {
+        "authority": 0.6,
+        "freshness": 0.9992,
+        "coverage": 0.1429,
+        "structure": 1.0,
+        "accessibility": 1.0
+      },
+      "notes": "downloads=46; sample of 100 rows from datasets-server"
+    },
+    {
+      "source_id": "osm_transit_stations",
+      "url": "https://overpass-api.de/api/interpreter",
+      "kind": "api",
+      "role": "context",
+      "title": "OpenStreetMap: rail/metro/subway stations in the spec region (Overpass API)",
+      "authority_class": "academic_or_open_repo",
+      "join_key": "latitude+longitude | locality",
+      "covers_features": [],
+      "feature_map": {},
+      "coverage_by_feature": {},
+      "est_rows": null,
+      "last_updated": null,
+      "licence": "ODbL-1.0",
+      "robots_allowed": true,
+      "trust_score": 0.59,
+      "trust_components": {
+        "authority": 0.8,
+        "freshness": 0.3,
+        "coverage": 0.0,
+        "structure": 1.0,
+        "accessibility": 1.0
+      },
+      "notes": "Region-agnostic: Overpass query for railway=station (incl. station=subway) inside the spec region's boundary. Distance is derived (method=derived); locality joins need geocoding first."
+    },
+    {
+      "source_id": "osm_amenities",
+      "url": "https://overpass-api.de/api/interpreter",
+      "kind": "api",
+      "role": "context",
+      "title": "OpenStreetMap: schools, hospitals, parks, shops around each location (Overpass API)",
+      "authority_class": "academic_or_open_repo",
+      "join_key": "latitude+longitude | locality",
+      "covers_features": [],
+      "feature_map": {},
+      "coverage_by_feature": {},
+      "est_rows": null,
+      "last_updated": null,
+      "licence": "ODbL-1.0",
+      "robots_allowed": true,
+      "trust_score": 0.59,
+      "trust_components": {
+        "authority": 0.8,
+        "freshness": 0.3,
+        "coverage": 0.0,
+        "structure": 1.0,
+        "accessibility": 1.0
+      },
+      "notes": "Region-agnostic: counts of OSM POIs around each record's coordinates or locality centroid (derived)."
+    },
+    {
+      "source_id": "nominatim_geocoding",
+      "url": "https://nominatim.openstreetmap.org/search",
+      "kind": "api",
+      "role": "context",
+      "title": "OpenStreetMap Nominatim: locality name -> coordinates",
+      "authority_class": "academic_or_open_repo",
+      "join_key": "locality",
+      "covers_features": [],
+      "feature_map": {},
+      "coverage_by_feature": {},
+      "est_rows": null,
+      "last_updated": null,
+      "licence": "ODbL-1.0",
+      "robots_allowed": true,
+      "trust_score": 0.59,
+      "trust_components": {
+        "authority": 0.8,
+        "freshness": 0.3,
+        "coverage": 0.0,
+        "structure": 1.0,
+        "accessibility": 1.0
+      },
+      "notes": "Usage policy: max 1 request/second, cache results, identify the application."
+    }
+  ],
+  "selected": [
+    "hf:Ammok/laptop_price_prediction",
+    "hf:privum/ai-compute-prices",
+    "hf:LuxDB/luxdb-luxury-price-history-sample"
+  ],
+  "rejected": [
+    [
+      "hf:MaxPrestige/CRUDE_OIL_PRICES",
+      "target 'price_usd' not found in columns"
+    ],
+    [
+      "hf:MrDebugger/pakistan-fuel-prices",
+      "target 'price_usd' not found in columns"
+    ],
+    [
+      "hf:nateraw/airbnb-stock-price",
+      "target 'price_usd' not found in columns"
+    ]
+  ],
+  "feasibility": [
+    {
+      "feature": "price_usd",
+      "status": "partial",
+      "sources": [
+        "hf:Ammok/laptop_price_prediction",
+        "hf:privum/ai-compute-prices",
+        "hf:LuxDB/luxdb-luxury-price-history-sample"
+      ],
+      "coverage": 0.7833,
+      "newest_date": "2026-11-14T00:03:00Z",
+      "trust": 0.7968,
+      "note": "target"
+    },
+    {
+      "feature": "brand",
+      "status": "partial",
+      "sources": [
+        "hf:Ammok/laptop_price_prediction"
+      ],
+      "coverage": 0.3333,
+      "newest_date": "2024-02-18T07:18:26Z",
+      "trust": 0.7968,
+      "note": ""
+    },
+    {
+      "feature": "processor_model",
+      "status": "partial",
+      "sources": [
+        "hf:Ammok/laptop_price_prediction"
+      ],
+      "coverage": 0.3333,
+      "newest_date": "2024-02-18T07:18:26Z",
+      "trust": 0.7968,
+      "note": ""
+    },
+    {
+      "feature": "ram_gb",
+      "status": "partial",
+      "sources": [
+        "hf:Ammok/laptop_price_prediction"
+      ],
+      "coverage": 0.3333,
+      "newest_date": "2024-02-18T07:18:26Z",
+      "trust": 0.7968,
+      "note": ""
+    },
+    {
+      "feature": "storage_gb",
+      "status": "partial",
+      "sources": [
+        "hf:Ammok/laptop_price_prediction"
+      ],
+      "coverage": 0.3333,
+      "newest_date": "2024-02-18T07:18:26Z",
+      "trust": 0.7968,
+      "note": ""
+    },
+    {
+      "feature": "storage_type",
+      "status": "not_found",
+      "sources": [],
+      "coverage": 0.0,
+      "newest_date": null,
+      "trust": null,
+      "note": "optional"
+    },
+    {
+      "feature": "screen_size_inches",
+      "status": "partial",
+      "sources": [
+        "hf:Ammok/laptop_price_prediction"
+      ],
+      "coverage": 0.3333,
+      "newest_date": "2024-02-18T07:18:26Z",
+      "trust": 0.7968,
+      "note": ""
+    },
+    {
+      "feature": "display_resolution",
+      "status": "partial",
+      "sources": [
+        "hf:Ammok/laptop_price_prediction"
+      ],
+      "coverage": 0.3333,
+      "newest_date": "2024-02-18T07:18:26Z",
+      "trust": 0.7968,
+      "note": ""
+    },
+    {
+      "feature": "graphics_processor",
+      "status": "partial",
+      "sources": [
+        "hf:Ammok/laptop_price_prediction",
+        "hf:privum/ai-compute-prices"
+      ],
+      "coverage": 0.6667,
+      "newest_date": "2026-11-14T00:03:00Z",
+      "trust": 0.7968,
+      "note": ""
+    },
+    {
+      "feature": "operating_system",
+      "status": "partial",
+      "sources": [
+        "hf:Ammok/laptop_price_prediction"
+      ],
+      "coverage": 0.3333,
+      "newest_date": "2024-02-18T07:18:26Z",
+      "trust": 0.7968,
+      "note": ""
+    },
+    {
+      "feature": "weight_kg",
+      "status": "partial",
+      "sources": [
+        "hf:Ammok/laptop_price_prediction"
+      ],
+      "coverage": 0.3333,
+      "newest_date": "2024-02-18T07:18:26Z",
+      "trust": 0.7968,
+      "note": ""
+    },
+    {
+      "feature": "battery_life_hours",
+      "status": "not_found",
+      "sources": [],
+      "coverage": 0.0,
+      "newest_date": null,
+      "trust": null,
+      "note": "optional"
+    },
+    {
+      "feature": "release_year",
+      "status": "not_found",
+      "sources": [],
+      "coverage": 0.0,
+      "newest_date": null,
+      "trust": null,
+      "note": "optional"
+    },
+    {
+      "feature": "laptop_category",
+      "status": "partial",
+      "sources": [
+        "hf:Ammok/laptop_price_prediction"
+      ],
+      "coverage": 0.3333,
+      "newest_date": "2024-02-18T07:18:26Z",
+      "trust": 0.7968,
+      "note": ""
+    }
+  ],
+  "deliverable": true,
+  "blocking": [],
+  "warnings": [
+    "no local manifest at data\\sources.json",
+    "paperswithbacktest/Stocks-Daily-Price: no column sample (HTTP 401 for https://datasets-server.huggingface.co/splits?dataset=paperswithbacktest%2FStocks-Daily-Price)",
+    "paperswithbacktest/Stocks-1Min-Price: no column sample (HTTP 401 for https://datasets-server.huggingface.co/splits?dataset=paperswithbacktest%2FStocks-1Min-Price)",
+    "hf:Ammok/laptop_price_prediction: ignored LLM match storage_type->' Storage' (not an available column)"
+  ],
+  "cost_usd": 0.003867575,
+  "http_pages": 17
+}

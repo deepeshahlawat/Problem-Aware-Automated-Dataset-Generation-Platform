@@ -1,0 +1,15 @@
+[
+  {
+    "source_id": "kaggle_delhi_magicbricks",
+    "title": "Delhi house prices (MagicBricks scrape, Kaggle)",
+    "path": "raw/delhi_magicbricks.csv",
+    "url": "https://www.kaggle.com/datasets/<owner>/<dataset>",
+    "kind": "file",
+    "role": "entity",
+    "authority_class": "community",
+    "licence": "<copy from the Kaggle page>",
+    "last_updated": "2021-01-01",
+    "region": "Delhi",
+    "notes": "Per_Sqft = Price / Area (leakage test E10)."
+  }
+]

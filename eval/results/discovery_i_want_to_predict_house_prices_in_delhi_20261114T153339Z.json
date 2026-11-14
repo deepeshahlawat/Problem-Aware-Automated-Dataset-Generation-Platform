@@ -1,0 +1,431 @@
+{
+  "problem": "I want to predict house prices in Delhi",
+  "spec": {
+    "problem_text": "I want to predict house prices in Delhi",
+    "task_type": "regression",
+    "target": {
+      "name": "house_price_inr",
+      "dtype": "float",
+      "unit": "INR",
+      "description": "Total sale price of the house in Indian Rupees.",
+      "required": true,
+      "expected_range": null,
+      "allowed_values": null
+    },
+    "features": [
+      {
+        "name": "built_up_area_sqft",
+        "dtype": "float",
+        "unit": "sqft",
+        "description": "Total built-up area of the house/apartment.",
+        "required": true,
+        "expected_range": null,
+        "allowed_values": null
+      },
+      {
+        "name": "plot_area_sqft",
+        "dtype": "float",
+        "unit": "sqft",
+        "description": "Size of the plot on which the property stands, if available.",
+        "required": false,
+        "expected_range": null,
+        "allowed_values": null
+      },
+      {
+        "name": "number_of_bedrooms",
+        "dtype": "float",
+        "unit": "count",
+        "description": "Number of bedrooms in the property.",
+        "required": false,
+        "expected_range": null,
+        "allowed_values": null
+      },
+      {
+        "name": "number_of_bathrooms",
+        "dtype": "float",
+        "unit": "count",
+        "description": "Number of bathrooms in the property.",
+        "required": false,
+        "expected_range": null,
+        "allowed_values": null
+      },
+      {
+        "name": "property_type",
+        "dtype": "float",
+        "unit": null,
+        "description": "Type of residential property.",
+        "required": false,
+        "expected_range": null,
+        "allowed_values": null
+      },
+      {
+        "name": "furnishing_status",
+        "dtype": "float",
+        "unit": null,
+        "description": "Furnishing level of the property.",
+        "required": false,
+        "expected_range": null,
+        "allowed_values": null
+      },
+      {
+        "name": "property_age_years",
+        "dtype": "float",
+        "unit": "years",
+        "description": "Age of the property at listing time.",
+        "required": false,
+        "expected_range": null,
+        "allowed_values": null
+      },
+      {
+        "name": "floor_number",
+        "dtype": "float",
+        "unit": "floor",
+        "description": "Floor number on which the unit is located, with ground floor as 0.",
+        "required": false,
+        "expected_range": null,
+        "allowed_values": null
+      },
+      {
+        "name": "number_of_parking_spaces",
+        "dtype": "float",
+        "unit": "count",
+        "description": "Number of parking spaces available with the property.",
+        "required": false,
+        "expected_range": null,
+        "allowed_values": null
+      },
+      {
+        "name": "facing",
+        "dtype": "float",
+        "unit": null,
+        "description": "Direction the main entrance or property faces.",
+        "required": false,
+        "expected_range": null,
+        "allowed_values": null
+      },
+      {
+        "name": "locality",
+        "dtype": "float",
+        "unit": null,
+        "description": "Locality or neighbourhood in Delhi where the property is located.",
+        "required": false,
+        "expected_range": null,
+        "allowed_values": null
+      },
+      {
+        "name": "distance_to_nearest_metro_station_km",
+        "dtype": "float",
+        "unit": "km",
+        "description": "Distance to the nearest metro station, derivable from OpenStreetMap location data.",
+        "required": false,
+        "expected_range": null,
+        "allowed_values": null
+      },
+      {
+        "name": "distance_to_city_center_km",
+        "dtype": "float",
+        "unit": "km",
+        "description": "Distance to Delhi city centre, derivable from OpenStreetMap location data.",
+        "required": false,
+        "expected_range": null,
+        "allowed_values": null
+      },
+      {
+        "name": "latitude",
+        "dtype": "float",
+        "unit": "degrees",
+        "description": "Latitude of the property location.",
+        "required": false,
+        "expected_range": null,
+        "allowed_values": null
+      }
+    ],
+    "region": "Delhi, India",
+    "temporal": {
+      "mode": "recent_weighted",
+      "half_life_years": 5.0,
+      "window_start": null,
+      "window_end": null
+    },
+    "min_rows": 300
+  },
+  "candidates": [
+    {
+      "source_id": "nominatim_geocoding",
+      "url": "https://nominatim.openstreetmap.org/search",
+      "kind": "api",
+      "role": "context",
+      "title": "OpenStreetMap Nominatim: locality name -> coordinates",
+      "authority_class": "academic_or_open_repo",
+      "join_key": "locality",
+      "covers_features": [
+        "latitude"
+      ],
+      "feature_map": {},
+      "coverage_by_feature": {},
+      "est_rows": null,
+      "last_updated": null,
+      "licence": "ODbL-1.0",
+      "robots_allowed": true,
+      "trust_score": 0.69,
+      "trust_components": {
+        "authority": 0.8,
+        "freshness": 0.3,
+        "coverage": 0.5,
+        "structure": 1.0,
+        "accessibility": 1.0
+      },
+      "notes": "Usage policy: max 1 request/second, cache results, identify the application."
+    },
+    {
+      "source_id": "osm_transit_stations",
+      "url": "https://overpass-api.de/api/interpreter",
+      "kind": "api",
+      "role": "context",
+      "title": "OpenStreetMap: rail/metro/subway stations in the spec region (Overpass API)",
+      "authority_class": "academic_or_open_repo",
+      "join_key": "latitude+longitude | locality",
+      "covers_features": [
+        "distance_to_nearest_metro_station_km"
+      ],
+      "feature_map": {},
+      "coverage_by_feature": {},
+      "est_rows": null,
+      "last_updated": null,
+      "licence": "ODbL-1.0",
+      "robots_allowed": true,
+      "trust_score": 0.6567,
+      "trust_components": {
+        "authority": 0.8,
+        "freshness": 0.3,
+        "coverage": 0.3333,
+        "structure": 1.0,
+        "accessibility": 1.0
+      },
+      "notes": "Region-agnostic: Overpass query for railway=station (incl. station=subway) inside the spec region's boundary. Distance is derived (method=derived); locality joins need geocoding first."
+    },
+    {
+      "source_id": "delhi_circle_rates",
+      "url": "https://revenue.delhi.gov.in",
+      "kind": "html_table",
+      "role": "context",
+      "title": "Delhi Revenue Department: circle rates by colony category (A-H)",
+      "authority_class": "official",
+      "join_key": "locality",
+      "covers_features": [],
+      "feature_map": {},
+      "coverage_by_feature": {},
+      "est_rows": null,
+      "last_updated": null,
+      "licence": "Government of India open data (GODL)",
+      "robots_allowed": true,
+      "trust_score": 0.63,
+      "trust_components": {
+        "authority": 1.0,
+        "freshness": 0.3,
+        "coverage": 0.0,
+        "structure": 0.8,
+        "accessibility": 1.0
+      },
+      "notes": "Official minimum valuation per colony category. Published as PDF/HTML; same colony name can be in different categories in different districts. Licence to be confirmed on the page."
+    },
+    {
+      "source_id": "osm_amenities",
+      "url": "https://overpass-api.de/api/interpreter",
+      "kind": "api",
+      "role": "context",
+      "title": "OpenStreetMap: schools, hospitals, parks, shops around each location (Overpass API)",
+      "authority_class": "academic_or_open_repo",
+      "join_key": "latitude+longitude | locality",
+      "covers_features": [],
+      "feature_map": {},
+      "coverage_by_feature": {},
+      "est_rows": null,
+      "last_updated": null,
+      "licence": "ODbL-1.0",
+      "robots_allowed": true,
+      "trust_score": 0.59,
+      "trust_components": {
+        "authority": 0.8,
+        "freshness": 0.3,
+        "coverage": 0.0,
+        "structure": 1.0,
+        "accessibility": 1.0
+      },
+      "notes": "Region-agnostic: counts of OSM POIs around each record's coordinates or locality centroid (derived)."
+    }
+  ],
+  "selected": [],
+  "rejected": [
+    [
+      "hf:ttd22/house-price",
+      "region mismatch (wanted Delhi, India)"
+    ],
+    [
+      "hf:animonte/train_house_price",
+      "region mismatch (wanted Delhi, India)"
+    ],
+    [
+      "hf:mrseba/boston_house_price",
+      "region mismatch (wanted Delhi, India)"
+    ],
+    [
+      "hf:SunnyWenwen/taiwan_house_price_data",
+      "region mismatch (wanted Delhi, India)"
+    ],
+    [
+      "hf:michaelmallari/house-prices-advanced-regression-techniques",
+      "region mismatch (wanted Delhi, India)"
+    ]
+  ],
+  "feasibility": [
+    {
+      "feature": "house_price_inr",
+      "status": "not_found",
+      "sources": [],
+      "coverage": 0.0,
+      "newest_date": null,
+      "trust": null,
+      "note": "target"
+    },
+    {
+      "feature": "built_up_area_sqft",
+      "status": "not_found",
+      "sources": [],
+      "coverage": 0.0,
+      "newest_date": null,
+      "trust": null,
+      "note": ""
+    },
+    {
+      "feature": "plot_area_sqft",
+      "status": "not_found",
+      "sources": [],
+      "coverage": 0.0,
+      "newest_date": null,
+      "trust": null,
+      "note": "optional"
+    },
+    {
+      "feature": "number_of_bedrooms",
+      "status": "not_found",
+      "sources": [],
+      "coverage": 0.0,
+      "newest_date": null,
+      "trust": null,
+      "note": "optional"
+    },
+    {
+      "feature": "number_of_bathrooms",
+      "status": "not_found",
+      "sources": [],
+      "coverage": 0.0,
+      "newest_date": null,
+      "trust": null,
+      "note": "optional"
+    },
+    {
+      "feature": "property_type",
+      "status": "not_found",
+      "sources": [],
+      "coverage": 0.0,
+      "newest_date": null,
+      "trust": null,
+      "note": "optional"
+    },
+    {
+      "feature": "furnishing_status",
+      "status": "not_found",
+      "sources": [],
+      "coverage": 0.0,
+      "newest_date": null,
+      "trust": null,
+      "note": "optional"
+    },
+    {
+      "feature": "property_age_years",
+      "status": "not_found",
+      "sources": [],
+      "coverage": 0.0,
+      "newest_date": null,
+      "trust": null,
+      "note": "optional"
+    },
+    {
+      "feature": "floor_number",
+      "status": "not_found",
+      "sources": [],
+      "coverage": 0.0,
+      "newest_date": null,
+      "trust": null,
+      "note": "optional"
+    },
+    {
+      "feature": "number_of_parking_spaces",
+      "status": "not_found",
+      "sources": [],
+      "coverage": 0.0,
+      "newest_date": null,
+      "trust": null,
+      "note": "optional"
+    },
+    {
+      "feature": "facing",
+      "status": "not_found",
+      "sources": [],
+      "coverage": 0.0,
+      "newest_date": null,
+      "trust": null,
+      "note": "optional"
+    },
+    {
+      "feature": "locality",
+      "status": "not_found",
+      "sources": [],
+      "coverage": 0.0,
+      "newest_date": null,
+      "trust": null,
+      "note": "optional"
+    },
+    {
+      "feature": "distance_to_nearest_metro_station_km",
+      "status": "not_found",
+      "sources": [],
+      "coverage": 0.0,
+      "newest_date": null,
+      "trust": null,
+      "note": "optional"
+    },
+    {
+      "feature": "distance_to_city_center_km",
+      "status": "not_found",
+      "sources": [],
+      "coverage": 0.0,
+      "newest_date": null,
+      "trust": null,
+      "note": "optional"
+    },
+    {
+      "feature": "latitude",
+      "status": "not_found",
+      "sources": [],
+      "coverage": 0.0,
+      "newest_date": null,
+      "trust": null,
+      "note": "optional"
+    }
+  ],
+  "deliverable": false,
+  "blocking": [
+    "target 'house_price_inr' not available from any selected entity source",
+    "required feature 'built_up_area_sqft' not found"
+  ],
+  "warnings": [
+    "no local manifest at data\\sources.json",
+    "subbaraoy/houseprice: no column sample (HTTP 500 for https://datasets-server.huggingface.co/splits?dataset=subbaraoy%2Fhouseprice)",
+    "c123ian/Dublin_House_Prices_2010_2022: no column sample (HTTP 500 for https://datasets-server.huggingface.co/first-rows?dataset=c123ian%2FDublin_House_Prices_2010_2022&config=default&split=train)",
+    "AIQuest/House-Price-In_Multan: no column sample (HTTP 500 for https://datasets-server.huggingface.co/splits?dataset=AIQuest%2FHouse-Price-In_Multan)"
+  ],
+  "cost_usd": 0.0020866,
+  "http_pages": 16
+}

@@ -101,6 +101,35 @@ class RecencyConfig(BaseModel):
     half_life_slow: float = 15.0
 
 
+class DiscoveryConfig(BaseModel):
+    """Stage 2 (design spec sections 10, 13.1, 15)."""
+
+    structure_by_kind: dict[str, float] = Field(
+        default_factory=lambda: {
+            "api": 1.0, "file": 1.0, "open_repo": 1.0,
+            "html_table": 0.8, "jsonld": 0.7, "web_page": 0.3,
+        }
+    )
+    # Licences treated as open (lower-case substrings).
+    open_licences: list[str] = Field(
+        default_factory=lambda: [
+            "cc0", "cc-by", "cc by", "odbl", "odc-by", "pddl", "mit", "apache",
+            "public domain", "godl", "open government", "ogl", "gpl",
+        ]
+    )
+    accessibility_open: float = 1.0
+    accessibility_unknown: float = 0.5
+    freshness_unknown: float = 0.3
+    min_trust: float = 0.35
+    # An entity source must cover at least max(abs, frac * n_features) non-target features.
+    min_feature_overlap_abs: int = 2
+    min_feature_overlap_frac: float = 0.25
+    max_entity_sources: int = 3
+    found_coverage: float = 0.8  # >= this non-null share counts as "found", else "partial"
+    sample_rows: int = 200
+    hf_search_limit: int = 8
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_prefix="DSAGENT_", env_file=".env", env_file_encoding="utf-8", extra="ignore"
@@ -133,6 +162,9 @@ class Settings(BaseSettings):
     relevance: RelevanceConfig = Field(default_factory=RelevanceConfig)
     selection: SelectionConfig = Field(default_factory=SelectionConfig)
     recency: RecencyConfig = Field(default_factory=RecencyConfig)
+    discovery: DiscoveryConfig = Field(default_factory=DiscoveryConfig)
+    source_manifest_path: Path = Path("data/sources.json")
+    context_registry_path: Path = Path("configs/context_sources.json")
 
 
 @lru_cache(maxsize=1)
