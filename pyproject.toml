@@ -1,0 +1,41 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "dsagent"
+version = "0.1.0"
+description = "Problem-aware automated dataset generation platform (B.Tech minor project)"
+readme = "README.md"
+requires-python = ">=3.11"
+# Lower bounds only for the foundation; run `pip freeze > requirements.lock` after install
+# to pin the exact versions used in evaluation runs.
+dependencies = [
+    "anthropic>=0.70",
+    "pydantic>=2.8",
+    "pydantic-settings>=2.4",
+]
+
+[project.optional-dependencies]
+data = [
+    "polars>=1.0",
+    "duckdb>=1.0",
+    "pyarrow>=16",
+    "pandera[polars]>=0.20",
+    "datasketch>=1.6",
+]
+ml = [
+    "scikit-learn>=1.5",
+    "lightgbm>=4.3",
+    "shap>=0.45",
+]
+dev = [
+    "pytest>=8",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/dsagent"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
