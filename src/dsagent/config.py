@@ -8,8 +8,9 @@ from __future__ import annotations
 
 from functools import lru_cache
 from pathlib import Path
+from typing import Literal, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import AliasChoices, BaseModel, Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -20,12 +21,20 @@ class ModelPrice(BaseModel):
     output: float
 
 
-# Anthropic first-party list prices (USD / 1M tokens), cached 2026-11-03.
-# Update when prices change; cost reporting (run_summary.json) depends on it.
+# List prices (USD / 1M tokens). Fallback for cost reporting only: OpenRouter
+# responses carry the actual billed cost, which takes precedence when present.
 MODEL_PRICES: dict[str, ModelPrice] = {
+    # Anthropic first-party, cached 2026-11-03
     "claude-opus-5-5": ModelPrice(input=4.00, output=20.00),
     "claude-sonnet-5-5": ModelPrice(input=2.00, output=10.00),
     "claude-haiku-5-5": ModelPrice(input=0.10, output=0.50),
+    # OpenRouter, from /api/v1/models on 2026-11-14
+    "meta/muse-ember": ModelPrice(input=0.10, output=0.50),
+    "openai/gpt-6-luna": ModelPrice(input=0.10, output=0.50),
+    "xiaomi/mimo-v2.6-flash": ModelPrice(input=0.14, output=0.28),
+    "anthropic/claude-haiku-5.5": ModelPrice(input=0.10, output=0.50),
+    "deepseek/deepseek-v4.1-flash-1017": ModelPrice(input=0.038, output=0.50),
+    "openai/gpt-6.1-terra": ModelPrice(input=1.00, output=5.00),
 }
 
 
@@ -97,9 +106,15 @@ class Settings(BaseSettings):
         env_prefix="DSAGENT_", env_file=".env", env_file_encoding="utf-8", extra="ignore"
     )
 
-    llm_provider: str = "anthropic"
-    llm_model_planner: str = "claude-opus-5-5"
-    llm_model_cheap: str = "claude-haiku-5-5"
+    # "openrouter" (default: cheapest to develop on) or "anthropic".
+    # Model choice rationale: docs/MODEL_CHOICE.md
+    llm_provider: Literal["openrouter", "anthropic"] = "openrouter"
+    llm_model_planner: str = "meta/muse-ember"
+    llm_model_cheap: str = "openai/gpt-6-luna"
+    openrouter_api_key: Optional[SecretStr] = Field(
+        default=None, validation_alias=AliasChoices("OPENROUTER_API_KEY", "DSAGENT_OPENROUTER_API_KEY")
+    )
+    openrouter_base_url: str = "https://openrouter.ai/api/v1"
     llm_max_tokens: int = 16000
     llm_max_retries_invalid_output: int = 2
     prompt_cache_namespace: str = "v1"

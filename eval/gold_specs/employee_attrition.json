@@ -1,0 +1,21 @@
+{
+  "id": "employee_attrition",
+  "problem": "Predict whether an employee will leave the company in the next year.",
+  "task_type": "classification",
+  "target": {"name": "attrition", "aliases": ["left_company", "will_leave", "attrited", "churn"]},
+  "features": [
+    {"name": "age", "aliases": ["employee_age"]},
+    {"name": "monthly_income", "aliases": ["salary", "monthly_salary", "income"]},
+    {"name": "years_at_company", "aliases": ["tenure_years", "tenure", "years_of_service"]},
+    {"name": "job_role", "aliases": ["role", "designation", "job_title"]},
+    {"name": "department", "aliases": ["dept"]},
+    {"name": "job_satisfaction", "aliases": ["satisfaction", "job_satisfaction_score"]},
+    {"name": "overtime", "aliases": ["over_time", "works_overtime"]},
+    {"name": "years_since_last_promotion", "aliases": ["years_since_promotion"]},
+    {"name": "distance_from_home_km", "aliases": ["distance_from_home", "commute_distance_km"]},
+    {"name": "performance_rating", "aliases": ["performance", "performance_score"]},
+    {"name": "work_life_balance", "aliases": ["work_life_balance_score"]},
+    {"name": "num_companies_worked", "aliases": ["companies_worked", "previous_employers"]}
+  ],
+  "must_not_include": ["employee_id", "exit_date", "exit_interview_reason", "resignation_date"]
+}

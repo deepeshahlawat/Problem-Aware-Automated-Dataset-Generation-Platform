@@ -42,12 +42,18 @@ class Budget:
         if self.cost_used >= self.cost_max:
             raise BudgetExceeded(f"cost budget exhausted (${self.cost_used:.4f}/${self.cost_max:.2f})")
 
-    def record_llm(self, model: str, input_tokens: int, output_tokens: int) -> float:
+    def record_llm(
+        self, model: str, input_tokens: int, output_tokens: int, billed_cost: float | None = None
+    ) -> float:
+        """`billed_cost` (e.g. OpenRouter's usage.cost) overrides the price-table estimate."""
         self.llm_calls += 1
         self.tokens_used += input_tokens + output_tokens
-        if model not in MODEL_PRICES:
-            self.unknown_price_models.add(model)
-        c = cost_usd(model, input_tokens, output_tokens)
+        if billed_cost is not None:
+            c = billed_cost
+        else:
+            if model not in MODEL_PRICES:
+                self.unknown_price_models.add(model)
+            c = cost_usd(model, input_tokens, output_tokens)
         self.cost_used += c
         return c
 

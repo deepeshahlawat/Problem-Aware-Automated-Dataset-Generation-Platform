@@ -1,0 +1,20 @@
+{
+  "id": "laptop_prices",
+  "problem": "Predict the price of a laptop from its specifications.",
+  "task_type": "regression",
+  "target": {"name": "price", "aliases": ["price_inr", "price_eur", "price_euros", "price_usd", "laptop_price"]},
+  "features": [
+    {"name": "brand", "aliases": ["company", "manufacturer"]},
+    {"name": "cpu", "aliases": ["processor", "cpu_model", "processor_model", "cpu_brand"]},
+    {"name": "ram_gb", "aliases": ["ram", "memory_gb"]},
+    {"name": "storage_gb", "aliases": ["storage", "storage_capacity_gb", "ssd_gb", "memory"]},
+    {"name": "storage_type", "aliases": ["ssd", "has_ssd", "drive_type"]},
+    {"name": "gpu", "aliases": ["gpu_model", "graphics_card", "gpu_brand"]},
+    {"name": "screen_size_inches", "aliases": ["inches", "screen_size", "display_size_inches"]},
+    {"name": "screen_resolution", "aliases": ["resolution", "display_resolution"]},
+    {"name": "operating_system", "aliases": ["os", "opsys"]},
+    {"name": "weight_kg", "aliases": ["weight"]},
+    {"name": "laptop_type", "aliases": ["type", "typename", "category", "form_factor"]}
+  ],
+  "must_not_include": ["product_id", "url", "model_name_id"]
+}

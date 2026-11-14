@@ -1,0 +1,868 @@
+{
+  "summary": {
+    "precision": {
+      "mean": 0.685,
+      "sd": 0.085
+    },
+    "recall": {
+      "mean": 0.812,
+      "sd": 0.139
+    },
+    "f1": {
+      "mean": 0.739,
+      "sd": 0.104
+    },
+    "target_accuracy": 1.0,
+    "forbidden_rate": 0.0,
+    "planner_model": "meta/muse-ember",
+    "stopped": null,
+    "errors": 1,
+    "llm_calls": 16,
+    "cache_hits": 1,
+    "cost_usd": 0.0366
+  },
+  "rows": [
+    {
+      "repeat": 0,
+      "id": "crop_yield_india",
+      "task_type_correct": true,
+      "target_correct": true,
+      "precision": 0.692,
+      "recall": 0.818,
+      "f1": 0.75,
+      "matched": [
+        "crop",
+        "season",
+        "state",
+        "district",
+        "fertilizer_kg_per_hectare",
+        "irrigated_area_fraction",
+        "average_temperature_c",
+        "soil_type",
+        "crop_year"
+      ],
+      "missed": [
+        "annual_rainfall_mm",
+        "pesticide_kg_per_hectare"
+      ],
+      "unmatched_predictions": [
+        "district_centroid_longitude",
+        "seasonal_precipitation_mm",
+        "mean_relative_humidity_percent",
+        "soil_organic_carbon_percent"
+      ],
+      "forbidden_included": [],
+      "cost_usd": 0.003652,
+      "tokens": 7547,
+      "predicted_features": [
+        "crop_type",
+        "season",
+        "year",
+        "state",
+        "district_centroid_latitude",
+        "district_centroid_longitude",
+        "seasonal_precipitation_mm",
+        "mean_temperature_celsius",
+        "mean_relative_humidity_percent",
+        "irrigation_coverage_percent",
+        "fertilizer_consumption_kg_per_hectare",
+        "soil_ph",
+        "soil_organic_carbon_percent"
+      ],
+      "target": "crop_yield_per_hectare",
+      "guard_removed": [],
+      "excluded_by_llm": [
+        "production_tonnes: Numerator of target, yield = production / harvested area; direct leakage.",
+        "harvested_area_ha: Denominator of target; direct leakage.",
+        "district_code: Administrative identifier with no predictive meaning beyond state and location already captured.",
+        "post_harvest_market_price_inr_per_quintal: Realised after harvest and not available at prediction time."
+      ]
+    },
+    {
+      "repeat": 0,
+      "id": "delhi_house_prices",
+      "task_type_correct": true,
+      "target_correct": true,
+      "precision": 0.625,
+      "recall": 0.417,
+      "f1": 0.5,
+      "matched": [
+        "built_up_area_sqft",
+        "bathrooms",
+        "property_age_years",
+        "distance_to_metro_km",
+        "parking"
+      ],
+      "missed": [
+        "locality",
+        "bedrooms",
+        "property_type",
+        "floor",
+        "furnishing",
+        "construction_status",
+        "transaction_type"
+      ],
+      "unmatched_predictions": [
+        "plot_area_sqft",
+        "distance_to_city_center_km",
+        "num_balconies"
+      ],
+      "forbidden_included": [],
+      "cost_usd": 0.0,
+      "tokens": 0,
+      "predicted_features": [
+        "super_built_up_area_sqft",
+        "plot_area_sqft",
+        "property_age_years",
+        "distance_to_nearest_metro_station_km",
+        "distance_to_city_center_km",
+        "num_bathrooms",
+        "num_parking_spaces",
+        "num_balconies"
+      ],
+      "target": "house_price_inr",
+      "guard_removed": [],
+      "excluded_by_llm": [
+        "{\"name\": \"price_per_sqft\", \"reason\": \"Computed directly from the target price and area, causing target leakage.\"}",
+        "{\"name\": \"listing_id\", \"reason\": \"Identifier with no predictive value for a new property.\"}",
+        "{\"name\": \"listing_url\", \"reason\": \"Identifier/URL with no predictive value.\"}",
+        "{\"name\": \"seller_name\", \"reason\": \"Personal identifier unavailable and irrelevant at prediction time.\"}",
+        "{\"name\": \"final_negotiated_price\", \"reason\": \"Not known at listing/prediction time and duplicates the target.\"}"
+      ]
+    },
+    {
+      "repeat": 0,
+      "id": "employee_attrition",
+      "task_type_correct": true,
+      "target_correct": true,
+      "precision": 0.923,
+      "recall": 1.0,
+      "f1": 0.96,
+      "matched": [
+        "age",
+        "monthly_income",
+        "years_at_company",
+        "job_role",
+        "department",
+        "job_satisfaction",
+        "overtime",
+        "years_since_last_promotion",
+        "distance_from_home_km",
+        "performance_rating",
+        "work_life_balance",
+        "num_companies_worked"
+      ],
+      "missed": [],
+      "unmatched_predictions": [
+        "total_working_years"
+      ],
+      "forbidden_included": [],
+      "cost_usd": 0.001797,
+      "tokens": 4371,
+      "predicted_features": [
+        "age",
+        "years_at_company",
+        "department",
+        "job_role",
+        "monthly_income",
+        "job_satisfaction",
+        "work_life_balance",
+        "overtime",
+        "years_since_last_promotion",
+        "num_companies_worked",
+        "distance_from_home",
+        "total_working_years",
+        "performance_rating"
+      ],
+      "target": "will_leave_next_year",
+      "guard_removed": [],
+      "excluded_by_llm": [
+        "employee_id: identifier, not predictive",
+        "employee_number: identifier, not predictive",
+        "termination_date: unavailable at prediction time, only known after leaving",
+        "resignation_date: unavailable at prediction time, only known after leaving",
+        "exit_interview_date: unavailable at prediction time, only known after leaving",
+        "attrition: leakage, duplicate of the contemporaneous target label"
+      ]
+    },
+    {
+      "repeat": 0,
+      "id": "laptop_prices",
+      "task_type_correct": true,
+      "target_correct": true,
+      "precision": 0.714,
+      "recall": 0.909,
+      "f1": 0.8,
+      "matched": [
+        "brand",
+        "cpu",
+        "ram_gb",
+        "storage_gb",
+        "storage_type",
+        "gpu",
+        "screen_size_inches",
+        "screen_resolution",
+        "operating_system",
+        "weight_kg"
+      ],
+      "missed": [
+        "laptop_type"
+      ],
+      "unmatched_predictions": [
+        "cpu_cores",
+        "gpu_vram_gb",
+        "battery_capacity_wh",
+        "release_year"
+      ],
+      "forbidden_included": [],
+      "cost_usd": 0.001935,
+      "tokens": 4112,
+      "predicted_features": [
+        "brand",
+        "cpu_brand",
+        "cpu_cores",
+        "ram_gb",
+        "storage_gb",
+        "storage_type",
+        "screen_size_inches",
+        "screen_resolution",
+        "gpu_type",
+        "gpu_vram_gb",
+        "battery_capacity_wh",
+        "weight_kg",
+        "operating_system",
+        "release_year"
+      ],
+      "target": "price",
+      "guard_removed": [],
+      "excluded_by_llm": [
+        "listing_id: Identifier, will not generalize to new laptops and is not a specification.",
+        "product_url: Identifier/URL, leaks the specific listing and does not generalize.",
+        "original_price: Price field derived from or closely related to the target, leaks the target.",
+        "discount_percent: Computed from the target price and sale price, leaks the target and is not a pre-prediction specification.",
+        "price_per_gb_ram: Computed from the target price, leaks the target.",
+        "user_rating: Post-launch information not available at prediction time for a new model.",
+        "review_count: Post-launch information not available at prediction time for a new model.",
+        "retailer_name: Retailer-specific markup is not a laptop specification and would not be available for a generic specification-based prediction."
+      ]
+    },
+    {
+      "repeat": 0,
+      "id": "used_car_prices_india",
+      "task_type_correct": true,
+      "target_correct": true,
+      "precision": 0.643,
+      "recall": 0.818,
+      "f1": 0.72,
+      "matched": [
+        "brand",
+        "model",
+        "car_age_years",
+        "kilometers_driven",
+        "fuel_type",
+        "transmission",
+        "num_previous_owners",
+        "engine_cc",
+        "fuel_efficiency_kmpl"
+      ],
+      "missed": [
+        "city",
+        "seller_type"
+      ],
+      "unmatched_predictions": [
+        "body_type",
+        "max_power_bhp",
+        "seats",
+        "registration_state",
+        "accident_history"
+      ],
+      "forbidden_included": [],
+      "cost_usd": 0.001873,
+      "tokens": 4522,
+      "predicted_features": [
+        "brand",
+        "model",
+        "year_of_manufacture",
+        "kilometers_driven",
+        "fuel_type",
+        "transmission_type",
+        "body_type",
+        "owner_type",
+        "engine_capacity_cc",
+        "mileage_kmpl",
+        "max_power_bhp",
+        "seats",
+        "registration_state",
+        "accident_history"
+      ],
+      "target": "resale_price_inr",
+      "guard_removed": [],
+      "excluded_by_llm": [
+        "listing_id: identifier with no predictive value",
+        "listing_url: identifier and not a structured feature",
+        "vehicle_identification_number: identifier that leaks vehicle identity",
+        "license_plate_number: identifier and privacy-sensitive",
+        "seller_name: identifier not available as a predictive feature",
+        "seller_phone_number: personal identifier",
+        "days_listed: not known before a listing is published, unavailable at prediction time",
+        "previous_listing_price: leakage from the target for the same transaction",
+        "price_per_kilometer_driven: computed from the target, leakage",
+        "dealer_markup_over_resale_price: computed from the target, leakage",
+        "image_urls: unstructured identifiers, not a tabular feature"
+      ]
+    },
+    {
+      "repeat": 1,
+      "id": "crop_yield_india",
+      "task_type_correct": true,
+      "target_correct": true,
+      "precision": 0.583,
+      "recall": 0.636,
+      "f1": 0.609,
+      "matched": [
+        "crop",
+        "season",
+        "state",
+        "annual_rainfall_mm",
+        "fertilizer_kg_per_hectare",
+        "average_temperature_c",
+        "soil_type"
+      ],
+      "missed": [
+        "district",
+        "pesticide_kg_per_hectare",
+        "irrigated_area_fraction",
+        "crop_year"
+      ],
+      "unmatched_predictions": [
+        "soil_ph",
+        "irrigated_area_pct",
+        "elevation_m",
+        "latitude",
+        "longitude"
+      ],
+      "forbidden_included": [],
+      "cost_usd": 0.005392,
+      "tokens": 11802,
+      "predicted_features": [
+        "crop_type",
+        "season",
+        "state",
+        "annual_rainfall_mm",
+        "avg_temperature_c",
+        "soil_ph",
+        "soil_type",
+        "irrigated_area_pct",
+        "fertilizer_consumption_kg_per_hectare",
+        "elevation_m",
+        "latitude",
+        "longitude"
+      ],
+      "target": "crop_yield_per_hectare",
+      "guard_removed": [],
+      "excluded_by_llm": [
+        "production_tonnes: leakage - yield is derived as production divided by area, so production is computed from the target",
+        "harvested_area_hectares: leakage - denominator used to compute yield (yield = production / area)",
+        "actual_yield_same_season: leakage - identical to the target",
+        "district_id: identifier with no predictive meaning outside sampled districts",
+        "district_name: identifier - location is captured by state, latitude and longitude",
+        "crop_market_price: unavailable at prediction time - future market price is not known at sowing"
+      ]
+    },
+    {
+      "repeat": 1,
+      "id": "delhi_house_prices",
+      "task_type_correct": true,
+      "target_correct": true,
+      "precision": 0.667,
+      "recall": 0.833,
+      "f1": 0.741,
+      "matched": [
+        "locality",
+        "built_up_area_sqft",
+        "bedrooms",
+        "bathrooms",
+        "property_type",
+        "property_age_years",
+        "floor",
+        "furnishing",
+        "distance_to_metro_km",
+        "parking"
+      ],
+      "missed": [
+        "construction_status",
+        "transaction_type"
+      ],
+      "unmatched_predictions": [
+        "total_floors_in_building",
+        "facing_direction",
+        "latitude",
+        "longitude",
+        "distance_to_city_center_km"
+      ],
+      "forbidden_included": [],
+      "cost_usd": 0.002032,
+      "tokens": 4306,
+      "predicted_features": [
+        "built_up_area_sqft",
+        "locality",
+        "number_of_bedrooms",
+        "number_of_bathrooms",
+        "property_type",
+        "property_age_years",
+        "floor_number",
+        "total_floors_in_building",
+        "furnishing_status",
+        "facing_direction",
+        "latitude",
+        "longitude",
+        "distance_to_city_center_km",
+        "distance_to_nearest_metro_station_km",
+        "number_of_parking_spaces"
+      ],
+      "target": "house_price_inr",
+      "guard_removed": [],
+      "excluded_by_llm": [
+        "price_per_sqft: computed directly from the target house price and area, which would leak the target.",
+        "listing_id: listing identifier that does not generalize to new houses.",
+        "listing_url: identifier and source-specific reference, not a predictive property feature.",
+        "agent_name: identifier of a listing agent and not a physical property characteristic.",
+        "days_on_market: outcome known only after a house has been listed, not at prediction time for a new listing.",
+        "final_negotiated_discount_pct: known only after negotiation and sale are completed."
+      ]
+    },
+    {
+      "repeat": 1,
+      "id": "employee_attrition",
+      "task_type_correct": true,
+      "target_correct": true,
+      "precision": 0.714,
+      "recall": 0.833,
+      "f1": 0.769,
+      "matched": [
+        "age",
+        "monthly_income",
+        "years_at_company",
+        "department",
+        "job_satisfaction",
+        "overtime",
+        "years_since_last_promotion",
+        "distance_from_home_km",
+        "performance_rating",
+        "work_life_balance"
+      ],
+      "missed": [
+        "job_role",
+        "num_companies_worked"
+      ],
+      "unmatched_predictions": [
+        "total_working_years",
+        "job_level",
+        "education_level",
+        "training_times_last_year"
+      ],
+      "forbidden_included": [],
+      "cost_usd": 0.002193,
+      "tokens": 5164,
+      "predicted_features": [
+        "age",
+        "years_at_company",
+        "years_since_last_promotion",
+        "total_working_years",
+        "job_satisfaction",
+        "work_life_balance",
+        "monthly_income",
+        "overtime",
+        "department",
+        "job_level",
+        "performance_rating",
+        "distance_from_home_km",
+        "education_level",
+        "training_times_last_year"
+      ],
+      "target": "will_leave_next_year",
+      "guard_removed": [],
+      "excluded_by_llm": [
+        "employee_id: identifier with no generalizable predictive value",
+        "employee_name: personal identifier",
+        "resignation_date: occurs after prediction time and leaks the target",
+        "resignation_letter_submitted: only known after the decision to leave, leakage and unavailable at prediction time",
+        "last_working_day: recorded after leaving, leakage",
+        "attrition_reason: only recorded after exit, leakage",
+        "interview_with_competitor: not reliably available in public HR datasets at prediction time"
+      ]
+    },
+    {
+      "repeat": 1,
+      "id": "laptop_prices",
+      "task_type_correct": true,
+      "target_correct": true,
+      "precision": 0.769,
+      "recall": 0.909,
+      "f1": 0.833,
+      "matched": [
+        "brand",
+        "cpu",
+        "ram_gb",
+        "storage_gb",
+        "storage_type",
+        "gpu",
+        "screen_size_inches",
+        "operating_system",
+        "weight_kg",
+        "laptop_type"
+      ],
+      "missed": [
+        "screen_resolution"
+      ],
+      "unmatched_predictions": [
+        "cpu_clock_speed_ghz",
+        "battery_life_hours",
+        "release_year"
+      ],
+      "forbidden_included": [],
+      "cost_usd": 0.001597,
+      "tokens": 4138,
+      "predicted_features": [
+        "brand",
+        "laptop_type",
+        "screen_size_inches",
+        "cpu_cores",
+        "cpu_clock_speed_ghz",
+        "ram_gb",
+        "storage_gb",
+        "storage_type",
+        "gpu_memory_gb",
+        "weight_kg",
+        "battery_life_hours",
+        "operating_system",
+        "release_year"
+      ],
+      "target": "laptop_price_usd",
+      "guard_removed": [],
+      "excluded_by_llm": [
+        "listing_id: identifier, not a product specification",
+        "product_url: identifier and unavailable as a specification feature",
+        "discount_amount_usd: leakage - computed from the target price",
+        "original_price_usd: leakage - near-duplicate of the target price",
+        "seller_name: identifier and not a laptop specification"
+      ]
+    },
+    {
+      "repeat": 1,
+      "id": "used_car_prices_india",
+      "task_type_correct": true,
+      "target_correct": true,
+      "precision": 0.643,
+      "recall": 0.818,
+      "f1": 0.72,
+      "matched": [
+        "brand",
+        "model",
+        "car_age_years",
+        "kilometers_driven",
+        "fuel_type",
+        "transmission",
+        "num_previous_owners",
+        "engine_cc",
+        "fuel_efficiency_kmpl"
+      ],
+      "missed": [
+        "city",
+        "seller_type"
+      ],
+      "unmatched_predictions": [
+        "body_type",
+        "registration_state",
+        "seating_capacity",
+        "insurance_status",
+        "accident_history_recorded"
+      ],
+      "forbidden_included": [],
+      "cost_usd": 0.005678,
+      "tokens": 11841,
+      "predicted_features": [
+        "car_age_years",
+        "km_driven",
+        "brand",
+        "model_name",
+        "fuel_type",
+        "transmission_type",
+        "engine_capacity_cc",
+        "mileage_km_per_litre",
+        "body_type",
+        "number_of_previous_owners",
+        "registration_state",
+        "seating_capacity",
+        "insurance_status",
+        "accident_history_recorded"
+      ],
+      "target": "resale_price_inr",
+      "guard_removed": [],
+      "excluded_by_llm": [
+        "listing_id: Identifier with no predictive meaning",
+        "listing_url: Identifier/URL with no predictive meaning",
+        "seller_name: Identifier that would not generalise to new sellers",
+        "listing_price_inr: Duplicate of the target",
+        "price_per_km_driven: Computed from the target and would leak the answer",
+        "depreciation_amount: Computed from the target and original price would leak the answer",
+        "days_to_sell: Future information not known at listing time"
+      ]
+    },
+    {
+      "repeat": 2,
+      "id": "crop_yield_india",
+      "task_type_correct": true,
+      "target_correct": true,
+      "precision": 0.643,
+      "recall": 0.818,
+      "f1": 0.72,
+      "matched": [
+        "crop",
+        "season",
+        "state",
+        "district",
+        "annual_rainfall_mm",
+        "fertilizer_kg_per_hectare",
+        "irrigated_area_fraction",
+        "average_temperature_c",
+        "soil_type"
+      ],
+      "missed": [
+        "pesticide_kg_per_hectare",
+        "crop_year"
+      ],
+      "unmatched_predictions": [
+        "district_longitude",
+        "mean_elevation_m",
+        "seasonal_rainfall_deviation_pct",
+        "extreme_heat_days",
+        "soil_organic_carbon_pct"
+      ],
+      "forbidden_included": [],
+      "cost_usd": 0.003256,
+      "tokens": 6802,
+      "predicted_features": [
+        "crop_type",
+        "season",
+        "state",
+        "district_latitude",
+        "district_longitude",
+        "mean_elevation_m",
+        "seasonal_rainfall_mm",
+        "seasonal_rainfall_deviation_pct",
+        "mean_temperature_c",
+        "extreme_heat_days",
+        "soil_ph",
+        "soil_organic_carbon_pct",
+        "irrigation_share_pct",
+        "fertilizer_npk_kg_per_hectare"
+      ],
+      "target": "crop_yield_per_hectare",
+      "guard_removed": [],
+      "excluded_by_llm": [
+        "district_id: identifier for the district rather than a generalizable feature",
+        "total_production_tonnes: derived from the target and unavailable before harvest",
+        "harvested_area_ha: denominator used to compute the target",
+        "previous_year_yield_per_hectare: lagged value of the target itself",
+        "market_price_per_quintal: post-harvest information unavailable at prediction time",
+        "market_arrivals_tonnes: post-harvest information unavailable at prediction time",
+        "post_harvest_rainfall_mm: future weather information unavailable at prediction time",
+        "farmer_id: identifier rather than a generalizable feature"
+      ]
+    },
+    {
+      "repeat": 2,
+      "id": "delhi_house_prices",
+      "error": "Clarify whether target is sale price in INR for residential houses/apartments, and over what time period."
+    },
+    {
+      "repeat": 2,
+      "id": "employee_attrition",
+      "task_type_correct": true,
+      "target_correct": true,
+      "precision": 0.714,
+      "recall": 0.833,
+      "f1": 0.769,
+      "matched": [
+        "age",
+        "monthly_income",
+        "years_at_company",
+        "job_role",
+        "department",
+        "job_satisfaction",
+        "overtime",
+        "years_since_last_promotion",
+        "performance_rating",
+        "work_life_balance"
+      ],
+      "missed": [
+        "distance_from_home_km",
+        "num_companies_worked"
+      ],
+      "unmatched_predictions": [
+        "total_working_years",
+        "environment_satisfaction",
+        "education_level",
+        "business_travel"
+      ],
+      "forbidden_included": [],
+      "cost_usd": 0.0017,
+      "tokens": 4347,
+      "predicted_features": [
+        "age",
+        "years_at_company",
+        "total_working_years",
+        "monthly_income",
+        "job_satisfaction",
+        "environment_satisfaction",
+        "work_life_balance",
+        "overtime",
+        "job_role",
+        "department",
+        "education_level",
+        "business_travel",
+        "years_since_last_promotion",
+        "performance_rating"
+      ],
+      "target": "will_leave_next_year",
+      "guard_removed": [],
+      "excluded_by_llm": [
+        "employee_id: identifier",
+        "employee_number: identifier",
+        "employee_name: identifier",
+        "termination_date: not available at prediction time and leaks target",
+        "resignation_date: not available at prediction time and leaks target",
+        "reason_for_leaving: only known after departure - leakage",
+        "exit_interview_score: only collected after leaving - leakage",
+        "last_working_day: not available at prediction time and leaks target"
+      ]
+    },
+    {
+      "repeat": 2,
+      "id": "laptop_prices",
+      "task_type_correct": true,
+      "target_correct": true,
+      "precision": 0.667,
+      "recall": 0.909,
+      "f1": 0.769,
+      "matched": [
+        "brand",
+        "cpu",
+        "ram_gb",
+        "storage_gb",
+        "storage_type",
+        "gpu",
+        "screen_size_inches",
+        "screen_resolution",
+        "operating_system",
+        "weight_kg"
+      ],
+      "missed": [
+        "laptop_type"
+      ],
+      "unmatched_predictions": [
+        "cpu_cores",
+        "cpu_speed_ghz",
+        "battery_capacity_wh",
+        "has_touchscreen",
+        "release_year"
+      ],
+      "forbidden_included": [],
+      "cost_usd": 0.001509,
+      "tokens": 3963,
+      "predicted_features": [
+        "brand",
+        "cpu_brand",
+        "cpu_cores",
+        "cpu_speed_ghz",
+        "ram_gb",
+        "storage_gb",
+        "storage_type",
+        "screen_size_inches",
+        "screen_resolution",
+        "gpu_type",
+        "battery_capacity_wh",
+        "weight_kg",
+        "has_touchscreen",
+        "operating_system",
+        "release_year"
+      ],
+      "target": "price_usd",
+      "guard_removed": [],
+      "excluded_by_llm": [
+        "listing_id: identifier, not a specification and unavailable for new laptops",
+        "retailer_url: identifier, not a specification",
+        "seller_name: identifier and not a product specification",
+        "discounted_sale_price: derived from the target price, leakage",
+        "price_per_gb_ram: computed from the target price, leakage",
+        "customer_rating: not a specification and unavailable at prediction time for a new model"
+      ]
+    },
+    {
+      "repeat": 2,
+      "id": "used_car_prices_india",
+      "task_type_correct": true,
+      "target_correct": true,
+      "precision": 0.6,
+      "recall": 0.818,
+      "f1": 0.692,
+      "matched": [
+        "brand",
+        "model",
+        "car_age_years",
+        "fuel_type",
+        "transmission",
+        "num_previous_owners",
+        "engine_cc",
+        "city",
+        "fuel_efficiency_kmpl"
+      ],
+      "missed": [
+        "kilometers_driven",
+        "seller_type"
+      ],
+      "unmatched_predictions": [
+        "kms_driven",
+        "body_type",
+        "seating_capacity",
+        "has_valid_insurance",
+        "has_accident_history",
+        "number_of_previous_services"
+      ],
+      "forbidden_included": [],
+      "cost_usd": 0.001974,
+      "tokens": 4893,
+      "predicted_features": [
+        "year_of_manufacture",
+        "brand",
+        "model_name",
+        "kms_driven",
+        "fuel_type",
+        "transmission_type",
+        "body_type",
+        "engine_capacity_cc",
+        "mileage_kmpl",
+        "seating_capacity",
+        "owner_type",
+        "location_state",
+        "has_valid_insurance",
+        "has_accident_history",
+        "number_of_previous_services"
+      ],
+      "target": "resale_price",
+      "guard_removed": [],
+      "excluded_by_llm": [
+        "listing_id: identifier, not available as a predictive feature",
+        "seller_name: identifier and personal data",
+        "seller_phone: identifier and personal data",
+        "listing_url: identifier",
+        "registration_number_plate: identifier",
+        "vin_or_chassis_number: identifier",
+        "asking_price: leakage, duplicate of the target at prediction time",
+        "price_per_kilometer: computed from the target price (leakage)",
+        "resale_value_ratio: computed from the target price (leakage)"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,21 @@
+{
+  "id": "delhi_house_prices",
+  "problem": "I want to predict house prices in Delhi.",
+  "task_type": "regression",
+  "target": {"name": "price", "aliases": ["sale_price", "house_price", "price_inr", "property_price"]},
+  "features": [
+    {"name": "locality", "aliases": ["location", "neighbourhood", "neighborhood", "area_name", "sector"]},
+    {"name": "built_up_area_sqft", "aliases": ["area", "area_sqft", "built_up_area", "carpet_area", "carpet_area_sqft", "size_sqft", "super_area"]},
+    {"name": "bedrooms", "aliases": ["bhk", "num_bedrooms", "no_of_bedrooms", "bedroom_count"]},
+    {"name": "bathrooms", "aliases": ["bathroom", "num_bathrooms", "bathroom_count"]},
+    {"name": "property_type", "aliases": ["type", "house_type", "building_type"]},
+    {"name": "property_age_years", "aliases": ["age", "building_age", "age_years", "property_age", "building_age_years", "year_built"]},
+    {"name": "floor", "aliases": ["floor_number", "floor_no"]},
+    {"name": "furnishing", "aliases": ["furnishing_status", "furnished"]},
+    {"name": "distance_to_metro_km", "aliases": ["distance_to_metro", "metro_distance_km", "nearest_metro_distance_km", "distance_to_nearest_metro_km"]},
+    {"name": "parking", "aliases": ["parking_spaces", "num_parking", "has_parking"]},
+    {"name": "construction_status", "aliases": ["status", "possession_status", "ready_to_move"]},
+    {"name": "transaction_type", "aliases": ["transaction", "new_or_resale", "resale"]}
+  ],
+  "must_not_include": ["price_per_sqft", "per_sqft", "listing_id", "url", "seller_name"]
+}

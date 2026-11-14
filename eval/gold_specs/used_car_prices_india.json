@@ -1,0 +1,20 @@
+{
+  "id": "used_car_prices_india",
+  "problem": "Estimate the resale price of used cars in India.",
+  "task_type": "regression",
+  "target": {"name": "price", "aliases": ["selling_price", "resale_price", "price_inr"]},
+  "features": [
+    {"name": "brand", "aliases": ["make", "manufacturer"]},
+    {"name": "model", "aliases": ["car_model", "model_name"]},
+    {"name": "car_age_years", "aliases": ["age", "age_years", "year", "manufacture_year", "registration_year"]},
+    {"name": "kilometers_driven", "aliases": ["km_driven", "mileage_km", "odometer_km"]},
+    {"name": "fuel_type", "aliases": ["fuel"]},
+    {"name": "transmission", "aliases": ["transmission_type", "gearbox"]},
+    {"name": "num_previous_owners", "aliases": ["owner", "owners", "owner_type", "number_of_owners"]},
+    {"name": "engine_cc", "aliases": ["engine", "engine_capacity_cc", "engine_displacement_cc"]},
+    {"name": "city", "aliases": ["location", "seller_city"]},
+    {"name": "seller_type", "aliases": ["seller"]},
+    {"name": "fuel_efficiency_kmpl", "aliases": ["mileage", "mileage_kmpl"]}
+  ],
+  "must_not_include": ["listing_id", "url", "registration_number"]
+}

@@ -45,7 +45,7 @@ def ask(client, user="classify this", version="t1"):
 def test_returns_parsed_and_records_usage():
     client, backend, budget = make_client([ok()])
     assert ask(client) == Answer(label="a", score=0.5)
-    assert backend.calls == ["claude-haiku-5-5"]
+    assert backend.calls == [client.settings.llm_model_cheap]
     assert budget.tokens_used == 120
     assert budget.cost_used == pytest.approx(cost_usd("claude-haiku-5-5", 100, 20))
 

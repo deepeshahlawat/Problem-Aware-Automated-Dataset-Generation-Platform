@@ -21,7 +21,8 @@ Extra dependency groups (installed when the matching stage is built): `.[data]` 
 | Pydantic contracts (`src/dsagent/schemas/`) | done, tested |
 | LLM wrapper + call cache + budget (`src/dsagent/llm/`) | done, tested with a fake backend |
 | Hand-downloaded case-study data (`data/README.md`) | instructions written; files not yet downloaded |
-| Stage 1 requirement analyser | next |
+| Stage 1 requirement analyser (`src/dsagent/stages/requirement.py`) | done, tested; E1 harness ready (`eval/run_e1.py`, 5 gold specs), not yet run against the real API |
+| Stage 2 source discovery | next |
 
 ## Rules that the code enforces
 - All LLM calls go through `dsagent.llm.LLMClient.structured()`. It uses a Pydantic output schema, retries then rejects invalid output, and uses the SQLite call cache and the run budget.

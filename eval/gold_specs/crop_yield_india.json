@@ -1,0 +1,20 @@
+{
+  "id": "crop_yield_india",
+  "problem": "Predict crop yield per hectare for districts in India.",
+  "task_type": "regression",
+  "target": {"name": "yield_tonnes_per_hectare", "aliases": ["yield", "crop_yield", "yield_per_hectare"]},
+  "features": [
+    {"name": "crop", "aliases": ["crop_type", "crop_name"]},
+    {"name": "season", "aliases": ["crop_season"]},
+    {"name": "state", "aliases": ["state_name"]},
+    {"name": "district", "aliases": ["district_name"]},
+    {"name": "annual_rainfall_mm", "aliases": ["rainfall", "rainfall_mm", "seasonal_rainfall_mm"]},
+    {"name": "fertilizer_kg_per_hectare", "aliases": ["fertilizer", "fertilizer_use", "fertilizer_kg_ha"]},
+    {"name": "pesticide_kg_per_hectare", "aliases": ["pesticide", "pesticide_use"]},
+    {"name": "irrigated_area_fraction", "aliases": ["irrigation", "irrigation_coverage", "irrigated_share"]},
+    {"name": "average_temperature_c", "aliases": ["temperature", "mean_temperature_c", "avg_temperature_c"]},
+    {"name": "soil_type", "aliases": ["soil"]},
+    {"name": "crop_year", "aliases": ["year"]}
+  ],
+  "must_not_include": ["production_tonnes", "production"]
+}

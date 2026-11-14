@@ -1,0 +1,81 @@
+{
+  "summary": {
+    "precision": {
+      "mean": 0.25,
+      "sd": null
+    },
+    "recall": {
+      "mean": 0.167,
+      "sd": null
+    },
+    "f1": {
+      "mean": 0.2,
+      "sd": null
+    },
+    "target_accuracy": 0.0,
+    "forbidden_rate": 0.0,
+    "planner_model": "meta/muse-ember",
+    "stopped": null,
+    "errors": 0,
+    "llm_calls": 1,
+    "cache_hits": 0,
+    "cost_usd": 0.0015
+  },
+  "rows": [
+    {
+      "repeat": 0,
+      "id": "delhi_house_prices",
+      "task_type_correct": true,
+      "target_correct": false,
+      "precision": 0.25,
+      "recall": 0.167,
+      "f1": 0.2,
+      "matched": [
+        "bathrooms",
+        "property_age_years"
+      ],
+      "missed": [
+        "locality",
+        "built_up_area_sqft",
+        "bedrooms",
+        "property_type",
+        "floor",
+        "furnishing",
+        "distance_to_metro_km",
+        "parking",
+        "construction_status",
+        "transaction_type"
+      ],
+      "unmatched_predictions": [
+        "super_built_up_area_sqft",
+        "plot_area_sqft",
+        "distance_to_nearest_metro_station_km",
+        "distance_to_city_center_km",
+        "num_parking_spaces",
+        "num_balconies"
+      ],
+      "forbidden_included": [],
+      "cost_usd": 0.001538,
+      "tokens": 3318,
+      "predicted_features": [
+        "super_built_up_area_sqft",
+        "plot_area_sqft",
+        "property_age_years",
+        "distance_to_nearest_metro_station_km",
+        "distance_to_city_center_km",
+        "num_bathrooms",
+        "num_parking_spaces",
+        "num_balconies"
+      ],
+      "target": "house_price_inr",
+      "guard_removed": [],
+      "excluded_by_llm": [
+        "{\"name\": \"price_per_sqft\", \"reason\": \"Computed directly from the target price and area, causing target leakage.\"}",
+        "{\"name\": \"listing_id\", \"reason\": \"Identifier with no predictive value for a new property.\"}",
+        "{\"name\": \"listing_url\", \"reason\": \"Identifier/URL with no predictive value.\"}",
+        "{\"name\": \"seller_name\", \"reason\": \"Personal identifier unavailable and irrelevant at prediction time.\"}",
+        "{\"name\": \"final_negotiated_price\", \"reason\": \"Not known at listing/prediction time and duplicates the target.\"}"
+      ]
+    }
+  ]
+}

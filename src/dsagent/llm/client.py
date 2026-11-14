@@ -44,6 +44,7 @@ class BackendResult:
     input_tokens: int
     output_tokens: int
     stop_reason: str | None
+    billed_cost: float | None = None
 
 
 class LLMBackend(Protocol):
@@ -99,6 +100,129 @@ class AnthropicBackend:
         )
 
 
+# JSON-schema keywords that strict structured outputs commonly reject. They are
+# stripped from the schema sent to the provider; Pydantic still enforces them locally.
+_UNSUPPORTED_STRICT_KEYS = {
+    "default", "title", "minItems", "maxItems", "minimum", "maximum", "exclusiveMinimum",
+    "exclusiveMaximum", "minLength", "maxLength", "pattern", "format",
+}
+
+
+def to_strict_json_schema(schema: dict) -> dict:
+    """Pydantic JSON schema -> OpenAI-style strict schema: every object closed
+    (additionalProperties false) and every property listed in `required`
+    (optional fields are already nullable via anyOf null).
+
+    Under 'properties' and '$defs' the keys are field/model names, which must be kept
+    even if they collide with a stripped keyword (e.g. a field called "title")."""
+
+    def walk_keep_props(node):
+        if isinstance(node, dict):
+            out = {}
+            for k, v in node.items():
+                if k in ("properties", "$defs"):
+                    out[k] = {name: walk_keep_props(sub) for name, sub in v.items()}
+                elif k in _UNSUPPORTED_STRICT_KEYS:
+                    continue
+                else:
+                    out[k] = walk_keep_props(v)
+            if out.get("type") == "object" and "properties" in out:
+                out["additionalProperties"] = False
+                out["required"] = list(out["properties"].keys())
+            return out
+        if isinstance(node, list):
+            return [walk_keep_props(x) for x in node]
+        return node
+
+    return walk_keep_props(schema)
+
+
+class OpenRouterBackend:
+    """Any OpenRouter model via its OpenAI-compatible Chat Completions endpoint.
+
+    Uses strict JSON-schema structured outputs and `provider.require_parameters` so
+    requests are only routed to providers that support them. The billed cost reported
+    in `usage.cost` is passed to the budget.
+    """
+
+    def __init__(self, api_key: str, base_url: str, user_agent: str, http_client=None) -> None:
+        if not api_key:
+            raise LLMError(
+                "OPENROUTER_API_KEY is not set. Add it to dataset-agent/.env "
+                "(see .env.example), or set DSAGENT_LLM_PROVIDER=anthropic."
+            )
+        if http_client is None:
+            import httpx
+
+            http_client = httpx.Client(timeout=180)
+        self._http = http_client
+        self._url = base_url.rstrip("/") + "/chat/completions"
+        self._headers = {
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json",
+            "X-Title": "dsagent",
+            "User-Agent": user_agent,
+        }
+
+    def call(
+        self, *, model: str, system: str, user: str, schema: type[BaseModel], max_tokens: int
+    ) -> BackendResult:
+        body = {
+            "model": model,
+            "max_tokens": max_tokens,
+            "messages": [
+                {"role": "system", "content": system},
+                {"role": "user", "content": user},
+            ],
+            "response_format": {
+                "type": "json_schema",
+                "json_schema": {
+                    "name": schema.__name__,
+                    "strict": True,
+                    "schema": to_strict_json_schema(schema.model_json_schema()),
+                },
+            },
+            "provider": {"require_parameters": True},
+            "usage": {"include": True},
+        }
+        resp = self._http.post(self._url, headers=self._headers, json=body)
+        if resp.status_code == 402:
+            raise LLMError("OpenRouter: insufficient credits (HTTP 402). Run stopped.")
+        if resp.status_code >= 400:
+            raise LLMError(f"OpenRouter HTTP {resp.status_code}: {resp.text[:500]}")
+        data = resp.json()
+        if "error" in data:
+            raise LLMError(f"OpenRouter error: {data['error']}")
+
+        choice = data["choices"][0]
+        message = choice.get("message") or {}
+        finish = choice.get("finish_reason")
+        stop_reason = {
+            "length": "max_tokens",
+            "content_filter": "refusal",
+        }.get(finish, finish)
+        if message.get("refusal"):
+            stop_reason = "refusal"
+        usage = data.get("usage") or {}
+        cost = usage.get("cost")
+        return BackendResult(
+            parsed=None,  # validated by LLMClient from raw_text
+            raw_text=message.get("content") or "",
+            model_served=data.get("model", model),
+            input_tokens=int(usage.get("prompt_tokens", 0)),
+            output_tokens=int(usage.get("completion_tokens", 0)),
+            stop_reason=stop_reason,
+            billed_cost=float(cost) if cost is not None else None,
+        )
+
+
+def make_backend(settings: Settings) -> LLMBackend:
+    if settings.llm_provider == "openrouter":
+        key = settings.openrouter_api_key.get_secret_value() if settings.openrouter_api_key else ""
+        return OpenRouterBackend(key, settings.openrouter_base_url, settings.user_agent)
+    return AnthropicBackend()
+
+
 class LLMClient:
     def __init__(
         self,
@@ -110,7 +234,7 @@ class LLMClient:
         self.settings = settings or get_settings()
         self.budget = budget
         self.cache = cache
-        self.backend = backend or AnthropicBackend()
+        self.backend = backend or make_backend(self.settings)
 
     def model_for(self, role: ModelRole) -> str:
         return (
@@ -153,7 +277,9 @@ class LLMClient:
                 schema=schema,
                 max_tokens=max_tokens or self.settings.llm_max_tokens,
             )
-            self.budget.record_llm(result.model_served, result.input_tokens, result.output_tokens)
+            self.budget.record_llm(
+                result.model_served, result.input_tokens, result.output_tokens, result.billed_cost
+            )
 
             if result.stop_reason == "refusal":
                 raise LLMRefusal(f"model declined the request ({model})")
