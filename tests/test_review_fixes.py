@@ -101,3 +101,23 @@ def test_truncation_retry_doubles_max_tokens():
     c = LLMClient(Budget(10_000, 1, 1), LLMCallCache(":memory:"), B(), Settings(_env_file=None))
     c.structured(role="cheap", system="", user="u", schema=_A, template_version="t", max_tokens=1000)
     assert limits == [1000, 2000]
+
+
+def test_openrouter_retries_error_inside_http_200(monkeypatch):
+    monkeypatch.setattr("time.sleep", lambda s: None)
+    overloaded = _Resp(200, {"error": {"message": "Our servers are currently overloaded.", "code": 502}})
+    ok = _Resp(200, {"model": "m", "choices": [{"message": {"content": '{"x": 2}'}, "finish_reason": "stop"}],
+                     "usage": {"prompt_tokens": 1, "completion_tokens": 1}})
+    seq = [overloaded, ok]
+
+    class HTTP:
+        def post(self, url, headers, json):
+            return seq.pop(0)
+    r = OpenRouterBackend("k", "https://x", "ua", HTTP()).call(model="m", system="", user="", schema=_A, max_tokens=5)
+    assert r.raw_text == '{"x": 2}'
+
+
+def test_unnamed_rate_column_is_a_name_leak():
+    assert named_as_target_transform("x_per_sqft", "house_price_inr")
+    assert named_as_target_transform("per_kg", "price")
+    assert not named_as_target_transform("rooms_per_floor", "house_price_inr")

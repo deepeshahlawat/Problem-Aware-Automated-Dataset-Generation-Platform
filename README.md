@@ -32,3 +32,27 @@ Extra dependency groups (installed when the matching stage is built): `.[data]` 
 - All LLM calls go through `dsagent.llm.LLMClient.structured()`. It uses a Pydantic output schema, retries then rejects invalid output, and uses the SQLite call cache and the run budget.
 - Thresholds, weights and half-lives live in `config.py`.
 - Every stage gets unit tests on small fixture data before it is wired into the graph.
+
+## Demo (MVP web app)
+
+**Windows PowerShell** (run each line separately; PowerShell 5.1 has no `&&`):
+```powershell
+cd dataset-agent
+.\.venv\Scripts\python.exe -m uvicorn dsagent.api.main:app --port 8000
+```
+
+**Git Bash:**
+```bash
+cd dataset-agent && .venv/Scripts/python -m uvicorn dsagent.api.main:app --port 8000
+```
+
+First time only, install the dependencies: `.\.venv\Scripts\python.exe -m pip install -e ".[data,ml,api,dev]"`.
+If port 8000 is busy, add `--port 8001` and open that port instead.
+Open http://localhost:8000. Flow: problem → review the spec (untick features) → review the feasibility report → build → results:
+- rows delivered, columns kept, holdout score and LLM cost;
+- leakage blocked;
+- feature relevance with reasons;
+- quality report;
+- downloads and a dataset preview.
+
+If validation needs review (e.g. an unknown currency), nothing is delivered until you press "Continue anyway (provisional)". The two example problems are served from the LLM cache (free). Data comes from the files registered in `data/sources.json`, because Stage 3 (live acquisition) is not built yet.

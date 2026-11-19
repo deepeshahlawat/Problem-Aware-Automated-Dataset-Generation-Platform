@@ -31,6 +31,10 @@ ml = [
     # SHAP values come from LightGBM itself (predict(pred_contrib=True), TreeSHAP),
     # so the heavy `shap` package is not needed.
 ]
+api = [
+    "fastapi>=0.115",
+    "uvicorn>=0.30",
+]
 dev = [
     "pytest>=8",
 ]

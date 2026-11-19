@@ -46,7 +46,11 @@ def named_as_target_transform(column: str, target: str) -> bool:
     if col == t or col.startswith(t + "_"):
         return True
     toks = col.split("_")
-    return target_head(t) in toks and bool({"per", "log", "ratio"} & set(toks))
+    if target_head(t) in toks and bool({"per", "log", "ratio"} & set(toks)):
+        return True
+    # 'per_sqft', 'per_kg', 'per_unit': a rate whose quantity isn't named is almost always
+    # the target per unit (real data: MagicBricks 'Per_Sqft' = price / area).
+    return len(toks) == 2 and toks[0] == "per"
 
 
 def jaccard(a: frozenset[str], b: frozenset[str]) -> float:

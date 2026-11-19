@@ -182,7 +182,10 @@ class ValidationConfig(BaseModel):
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_prefix="DSAGENT_", env_file=".env", env_file_encoding="utf-8", extra="ignore"
+        env_prefix="DSAGENT_",
+        # the project's own .env (found wherever the app starts); a .env in the cwd overrides it
+        env_file=(str(Path(__file__).resolve().parents[2] / ".env"), ".env"),
+        env_file_encoding="utf-8", extra="ignore",
     )
 
     # "openrouter" (default: cheapest to develop on) or "anthropic".

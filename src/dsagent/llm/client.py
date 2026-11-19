@@ -169,6 +169,18 @@ class OpenRouterBackend:
 
     RETRY_STATUS = {408, 429, 500, 502, 503, 504}
 
+    @staticmethod
+    def _error_code_in_body(resp) -> int | None:
+        """OpenRouter sometimes answers HTTP 200 with {"error": {"code": 502, ...}} when the
+        upstream provider is overloaded (seen live on 2026-11-19); treat that as transient too."""
+        if resp.status_code != 200:
+            return None
+        try:
+            err = resp.json().get("error")
+            return int(err.get("code")) if isinstance(err, dict) and err.get("code") is not None else None
+        except (ValueError, TypeError, AttributeError):
+            return None
+
     def _post_with_retry(self, body: dict, retries: int = 2, base_delay: float = 2.0):
         """Retry transient failures (rate limit, gateway errors, timeouts) with backoff,
         honouring Retry-After, like the Anthropic SDK does. Other errors surface at once."""
@@ -182,7 +194,8 @@ class OpenRouterBackend:
                     raise LLMError(f"OpenRouter unreachable after {retries + 1} attempts: {exc}") from exc
                 time.sleep(base_delay * 2 ** attempt)
                 continue
-            if resp.status_code not in self.RETRY_STATUS or attempt == retries:
+            transient = resp.status_code in self.RETRY_STATUS or self._error_code_in_body(resp) in self.RETRY_STATUS
+            if not transient or attempt == retries:
                 return resp
             retry_after = getattr(resp, "headers", {}).get("retry-after")
             try:

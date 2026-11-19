@@ -103,7 +103,8 @@ def test_name_leak_rule():
     assert _name_leak("x_price_per_sqft", "price")
     assert _name_leak("log_price", "price")
     assert not _name_leak("area_sqft", "price")
-    assert not _name_leak("x_per_sqft", "price")  # caught by the pair rule instead
+    assert _name_leak("x_per_sqft", "price")  # an unnamed rate: almost always target per unit
+    assert not _name_leak("x_sqft_per_room", "price")
 
 
 class FakeSemantic:

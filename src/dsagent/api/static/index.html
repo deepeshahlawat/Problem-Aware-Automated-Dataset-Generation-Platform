@@ -1,0 +1,642 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dataset Agent</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com/3.4.16"></script>
+<script>
+  tailwind.config = {
+    darkMode: "class",
+    theme: { extend: {
+      fontFamily: { sans: ["Inter", "ui-sans-serif", "system-ui", "sans-serif"], mono: ["JetBrains Mono", "ui-monospace", "monospace"] },
+      colors: { accent: { 50: "#effaf8", 100: "#d7f2ee", 200: "#b0e4dc", 300: "#7fd0c4", 400: "#4bb4a7", 500: "#2b998d", 600: "#1f7b72", 700: "#1c635c", 800: "#1a504b", 900: "#18433f" } },
+      boxShadow: { card: "0 1px 2px rgba(16,24,40,.04), 0 1px 3px rgba(16,24,40,.06)" },
+    } },
+  };
+  try {
+    const t = localStorage.getItem("theme");
+    if (t === "dark" || (!t && matchMedia("(prefers-color-scheme: dark)").matches)) document.documentElement.classList.add("dark");
+  } catch (e) {}
+</script>
+<style>
+  body { font-feature-settings: "cv11", "ss01"; -webkit-font-smoothing: antialiased; }
+  .num { font-variant-numeric: tabular-nums; }
+  .spin { animation: spin .9s linear infinite; } @keyframes spin { to { transform: rotate(360deg); } }
+  .fade { animation: fade .25s ease-out; } @keyframes fade { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+  :focus-visible { outline: 2px solid #2b998d; outline-offset: 2px; border-radius: 6px; }
+  .scroll-thin::-webkit-scrollbar { height: 8px; width: 8px; } .scroll-thin::-webkit-scrollbar-thumb { background: rgba(113,113,122,.35); border-radius: 8px; }
+</style>
+</head>
+<body class="bg-zinc-50 text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100 font-sans min-h-screen">
+
+<!-- Top bar -->
+<header class="sticky top-0 z-30 border-b border-zinc-200/80 dark:border-zinc-800 bg-white/85 dark:bg-zinc-950/85 backdrop-blur">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 h-14 flex items-center gap-1.5 sm:gap-3">
+    <a href="/" class="flex items-center gap-2.5 shrink-0" aria-label="Dataset Agent home">
+      <svg width="26" height="26" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" class="fill-zinc-900 dark:fill-white"/><path d="M9 11h14M9 16h9M9 21h11" stroke-width="2.4" stroke-linecap="round" class="stroke-white dark:stroke-zinc-900"/><circle cx="23" cy="21" r="2.4" fill="#2b998d"/></svg>
+      <span class="font-semibold tracking-tight whitespace-nowrap">Dataset Agent</span>
+      <span class="hidden md:inline text-xs font-medium text-zinc-500 border border-zinc-200 dark:border-zinc-800 rounded px-1.5 py-0.5">MVP</span>
+    </a>
+    <div class="flex-1"></div>
+    <div class="relative">
+      <button id="btn-runs" class="whitespace-nowrap text-sm text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white px-2.5 py-1.5 rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-900" aria-haspopup="true" aria-expanded="false" aria-label="Recent runs"><span class="hidden sm:inline">Recent runs</span><svg class="sm:hidden w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></button>
+      <div id="runs-menu" class="hidden absolute right-0 mt-2 w-[min(20rem,calc(100vw-2rem))] rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-lg p-1 text-sm"></div>
+    </div>
+    <button id="btn-theme" class="p-2 rounded-md text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-900" aria-label="Toggle colour theme">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+    </button>
+    <button id="btn-new" class="whitespace-nowrap text-sm font-medium rounded-md bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 px-3 py-1.5 hover:opacity-90">New run</button>
+  </div>
+</header>
+
+<div class="max-w-7xl mx-auto px-4 sm:px-6 py-6 lg:py-8 grid grid-cols-[minmax(0,1fr)] lg:grid-cols-[248px_minmax(0,1fr)] gap-6 lg:gap-10">
+  <!-- Step rail -->
+  <aside class="lg:sticky lg:top-24 self-start min-w-0">
+    <nav aria-label="Progress"><ol id="rail" class="flex lg:flex-col gap-1 overflow-x-auto scroll-thin pb-1 lg:pb-0"></ol></nav>
+    <div id="run-card" class="hidden lg:block mt-6"></div>
+  </aside>
+
+  <!-- Main panel -->
+  <main id="view" class="min-w-0" aria-live="polite"></main>
+</div>
+
+<script>
+/* ------------------------------------------------------------------ helpers */
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const ICON = {
+  check: '<path d="M5 12.5l4.2 4.2L19 7" />',
+  x: '<path d="M6 6l12 12M18 6L6 18" />',
+  alert: '<path d="M12 8v5M12 16.5v.5"/><path d="M10.3 3.9L2.5 17.5A2 2 0 0 0 4.2 20.5h15.6a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/>',
+  info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8v.5"/>',
+  arrow: '<path d="M5 12h14M13 6l6 6-6 6"/>',
+  back: '<path d="M19 12H5M11 6l-6 6 6 6"/>',
+  download: '<path d="M12 4v11M7 10l5 5 5-5M5 20h14"/>',
+  shield: '<path d="M12 3l8 3v6c0 4.5-3.4 8.4-8 9-4.6-.6-8-4.5-8-9V6l8-3z"/><path d="M9 12l2 2 4-4"/>',
+  file: '<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/>',
+  db: '<ellipse cx="12" cy="5.5" rx="7" ry="2.5"/><path d="M5 5.5v13c0 1.4 3.1 2.5 7 2.5s7-1.1 7-2.5v-13"/><path d="M5 12c0 1.4 3.1 2.5 7 2.5s7-1.1 7-2.5"/>',
+  spark: '<path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5L18 18M6 18l2.5-2.5M15.5 8.5L18 6"/>',
+};
+const icon = (name, cls = "w-4 h-4") => `<svg class="${cls} shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICON[name]}</svg>`;
+
+const UNIT_LABEL = {sqft: "sq ft", sqm: "sq m", inr: "₹", usd: "$", eur: "€", km: "km", kg: "kg", gb: "GB", inch: "in", inches: "in", years: "years", hours: "hours", pct: "%", mm: "mm"};
+function label(name) {
+  if (!name) return "";
+  let t = String(name).replace(/^x_/, "").split("_").filter(Boolean);
+  if (t[0] === "number" && t[1] === "of") t = t.slice(2);
+  if (t[0] === "num" || t[0] === "no") t = t.slice(1);
+  const last = t[t.length - 1];
+  if (t.length === 2 && t[0] === "per") return `Per ${UNIT_LABEL[last] || last}`;
+  let unit = "";
+  if (t.length > 1 && UNIT_LABEL[last]) { unit = UNIT_LABEL[last]; t = t.slice(0, -1); }
+  const words = t.join(" ");
+  const out = words.charAt(0).toUpperCase() + words.slice(1);
+  return unit ? `${out} (${unit})` : out;
+}
+const TYPE_LABEL = {int: "Whole number", float: "Number", category: "Category", text: "Text", bool: "Yes / No", date: "Date"};
+const nfmt = (n, d = 0) => Number(n).toLocaleString("en-IN", {maximumFractionDigits: d, minimumFractionDigits: d});
+function money(v, unit) {
+  const u = (unit || "").toLowerCase();
+  if (u === "inr" || u === "₹") {
+    if (Math.abs(v) >= 1e7) return "₹" + nfmt(v / 1e7, 2) + " Cr";
+    if (Math.abs(v) >= 1e5) return "₹" + nfmt(v / 1e5, 1) + " L";
+    return "₹" + nfmt(v);
+  }
+  return null;
+}
+function fmtValue(v, col) {
+  if (v === null || v === undefined || v === "") return '<span class="text-zinc-400">—</span>';
+  if (typeof v === "number") {
+    const f = featureOf(col);
+    const m = f ? money(v, f.unit) : null;
+    if (m) return m;
+    if (col === "_row_confidence" || col === "_sample_weight") return nfmt(v, 2);
+    return Number.isInteger(v) ? nfmt(v) : nfmt(v, Math.abs(v) < 10 ? 2 : 1);
+  }
+  const s = String(v);
+  return esc(s.charAt(0).toUpperCase() + s.slice(1));
+}
+function featureOf(name) {
+  const s = state.job && state.job.spec; if (!s) return null;
+  if (s.target.name === name) return s.target;
+  return s.features.find(f => f.name === name) || null;
+}
+const pct = (x) => `${Math.round(x * 100)}%`;
+
+/* ------------------------------------------------------------------ UI atoms */
+const TONE = {
+  ok: "bg-emerald-50 text-emerald-800 ring-emerald-600/20 dark:bg-emerald-500/10 dark:text-emerald-300 dark:ring-emerald-400/20",
+  warn: "bg-amber-50 text-amber-800 ring-amber-600/20 dark:bg-amber-500/10 dark:text-amber-300 dark:ring-amber-400/20",
+  bad: "bg-rose-50 text-rose-800 ring-rose-600/20 dark:bg-rose-500/10 dark:text-rose-300 dark:ring-rose-400/20",
+  info: "bg-sky-50 text-sky-800 ring-sky-600/20 dark:bg-sky-500/10 dark:text-sky-300 dark:ring-sky-400/20",
+  muted: "bg-zinc-100 text-zinc-700 ring-zinc-500/15 dark:bg-zinc-800 dark:text-zinc-300 dark:ring-zinc-400/15",
+  accent: "bg-accent-50 text-accent-800 ring-accent-600/20 dark:bg-accent-500/10 dark:text-accent-200 dark:ring-accent-400/20",
+};
+const pill = (text, tone = "muted", ic) => `<span class="inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-medium ring-1 ring-inset whitespace-nowrap ${TONE[tone]}">${ic ? icon(ic, "w-3.5 h-3.5") : ""}${esc(text)}</span>`;
+const card = (body, extra = "") => `<div class="rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-card ${extra}">${body}</div>`;
+const BTN = "inline-flex items-center justify-center gap-2 rounded-lg bg-accent-600 hover:bg-accent-700 text-white px-4 py-2.5 text-sm font-semibold shadow-sm disabled:opacity-50 disabled:cursor-not-allowed transition-colors";
+const BTN2 = "inline-flex items-center justify-center gap-2 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 hover:bg-zinc-50 dark:hover:bg-zinc-800 px-4 py-2.5 text-sm font-medium transition-colors";
+const eyebrow = (t) => `<div class="text-xs font-semibold uppercase tracking-wider text-accent-700 dark:text-accent-300">${esc(t)}</div>`;
+const H1 = (t) => `<h1 class="text-2xl font-semibold tracking-tight mt-1">${t}</h1>`;
+const lead = (t) => `<p class="text-zinc-600 dark:text-zinc-400 mt-2 max-w-3xl leading-relaxed">${t}</p>`;
+function callout(tone, title, body, ic = "info") {
+  const t = {ok: "border-emerald-200 bg-emerald-50/70 dark:border-emerald-900 dark:bg-emerald-950/40",
+    warn: "border-amber-200 bg-amber-50/70 dark:border-amber-900 dark:bg-amber-950/40",
+    bad: "border-rose-200 bg-rose-50/70 dark:border-rose-900 dark:bg-rose-950/40",
+    info: "border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900"}[tone];
+  const ic_c = {ok: "text-emerald-600", warn: "text-amber-600", bad: "text-rose-600", info: "text-zinc-500"}[tone];
+  return `<div class="rounded-xl border ${t} p-4 flex gap-3"><span class="${ic_c} mt-0.5">${icon(ic, "w-5 h-5")}</span><div class="min-w-0 text-sm"><div class="font-semibold">${title}</div><div class="mt-1 text-zinc-700 dark:text-zinc-300 leading-relaxed">${body}</div></div></div>`;
+}
+function actionBar(left, right) {
+  return `<div class="sticky bottom-0 z-20 mt-8 -mx-4 sm:mx-0 px-4 sm:px-5 py-3 border-t sm:border sm:rounded-xl border-zinc-200 dark:border-zinc-800 bg-white/95 dark:bg-zinc-900/95 backdrop-blur flex flex-col sm:flex-row sm:items-center gap-3 justify-between">
+    <div class="text-sm text-zinc-600 dark:text-zinc-400 min-w-0">${left}</div><div class="flex flex-wrap gap-2 sm:shrink-0 [&>*]:flex-1 sm:[&>*]:flex-none">${right}</div></div>
+    <div id="inline-error" class="hidden mt-3"></div>`;
+}
+function showInlineError(msg) {
+  const el = $("inline-error"); if (!el) return alert(msg);
+  el.innerHTML = callout("bad", "Something went wrong", esc(msg), "alert"); el.classList.remove("hidden");
+}
+
+/* ------------------------------------------------------------------ state + API */
+const state = { job: null, view: "compose", poll: null, tab: "overview", buildStart: null, sources: [] };
+const STEPS = [
+  {key: "compose", title: "Problem", sub: "Describe what to predict"},
+  {key: "spec", title: "Specification", sub: "Review proposed features"},
+  {key: "sources", title: "Sources", sub: "Check availability & trust"},
+  {key: "build", title: "Build", sub: "Merge, validate, score"},
+  {key: "results", title: "Dataset", sub: "Results & downloads"},
+];
+const order = (k) => STEPS.findIndex(s => s.key === k);
+function reached() {
+  const st = state.job ? state.job.status : null;
+  if (!st) return 0;
+  if (st === "spec_ready") return 1;
+  if (st === "feasibility_ready") return 2;
+  if (st === "building") return 3;
+  return 4; // done, needs_review, failed
+}
+
+async function api(path, body) {
+  const r = await fetch(path, body === undefined ? {} : {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(body)});
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) {
+    const d = data.detail;
+    const msg = typeof d === "string" ? d : (d && d.message) || (Array.isArray(d) ? "Please check your input." : r.statusText);
+    const err = new Error(d && d.kind === "clarification" ? msg : msg); err.kind = d && d.kind; throw err;
+  }
+  return data;
+}
+function setUrl(id) { const u = new URL(location); id ? u.searchParams.set("run", id) : u.searchParams.delete("run"); history.replaceState(null, "", u); }
+
+/* ------------------------------------------------------------------ rail + run card */
+function renderRail() {
+  const r = reached(), cur = order(state.view);
+  $("rail").innerHTML = STEPS.map((s, i) => {
+    const done = i < r || (i === 4 && state.job && state.job.status === "done");
+    const active = i === cur, clickable = i <= r && !active;
+    const dot = done && !active
+      ? `<span class="w-6 h-6 rounded-full bg-accent-600 text-white flex items-center justify-center">${icon("check", "w-3.5 h-3.5")}</span>`
+      : `<span class="w-6 h-6 rounded-full flex items-center justify-center text-xs font-semibold ${active ? "bg-zinc-900 text-white dark:bg-white dark:text-zinc-900" : "border border-zinc-300 dark:border-zinc-700 text-zinc-500"}">${i + 1}</span>`;
+    return `<li class="shrink-0"><button ${clickable ? "" : "disabled"} data-step="${s.key}" class="w-full text-left flex items-center gap-3 rounded-lg px-2.5 py-2 ${active ? "bg-white dark:bg-zinc-900 shadow-card border border-zinc-200 dark:border-zinc-800" : "border border-transparent"} ${clickable ? "hover:bg-white/70 dark:hover:bg-zinc-900/70 cursor-pointer" : "cursor-default"}" ${active ? 'aria-current="step"' : ""}>
+      ${dot}<span class="min-w-0"><span class="block text-sm font-medium ${i > r ? "text-zinc-400 dark:text-zinc-600" : ""}">${s.title}</span><span class="hidden lg:block text-xs text-zinc-500 truncate">${s.sub}</span></span></button></li>`;
+  }).join("");
+  document.querySelectorAll("[data-step]").forEach(b => b.onclick = () => go(b.dataset.step));
+  const rc = $("run-card");
+  if (state.job) {
+    const c = state.job.cost || {};
+    rc.innerHTML = `<div class="rounded-xl border border-zinc-200 dark:border-zinc-800 p-4 text-sm">
+      <div class="text-xs font-medium text-zinc-500 uppercase tracking-wider">Current run</div>
+      <div class="mt-1.5 font-medium leading-snug">${esc(state.job.problem)}</div>
+      <dl class="mt-3 space-y-1 text-xs text-zinc-500">
+        <div class="flex justify-between"><dt>Run ID</dt><dd class="font-mono text-zinc-700 dark:text-zinc-300">${esc(state.job.id)}</dd></div>
+        <div class="flex justify-between"><dt>AI cost so far</dt><dd class="num text-zinc-700 dark:text-zinc-300">$${(c.usd || 0).toFixed(4)}</dd></div>
+        <div class="flex justify-between"><dt>Answers reused</dt><dd class="num text-zinc-700 dark:text-zinc-300">${c.cache_hits || 0} of ${(c.cache_hits || 0) + (c.llm_calls || 0)}</dd></div>
+      </dl></div>`;
+  } else { rc.innerHTML = ""; }
+}
+function go(view) { state.view = view; render(); window.scrollTo({top: 0, behavior: "smooth"}); }
+function render() { renderRail(); ({compose: viewCompose, spec: viewSpec, sources: viewSources, build: viewBuild, results: viewResults})[state.view](); }
+
+/* ------------------------------------------------------------------ 1. compose */
+const EXAMPLES = [
+  {text: "I want to predict house prices in Delhi", title: "Delhi house prices", meta: "Real estate · regression · 1,259 listings"},
+  {text: "Predict the price of a laptop from its specifications", title: "Laptop prices", meta: "Consumer electronics · regression · 1,302 laptops"},
+];
+function viewCompose() {
+  const src = state.sources.map(s => `<li class="flex items-start justify-between gap-3 py-2.5 border-t border-zinc-100 dark:border-zinc-800 first:border-0">
+      <div class="min-w-0"><div class="text-sm font-medium">${esc(s.title)}</div><div class="text-xs text-zinc-500 mt-0.5">Licence: ${esc(s.licence || "not stated")}${s.region ? " · " + esc(s.region) : ""}</div></div>
+      ${s.available ? pill("Ready", "ok") : pill("File missing", "bad")}</li>`).join("") || '<li class="text-sm text-zinc-500 py-2">No sources registered.</li>';
+  $("view").innerHTML = `<div class="fade">
+    ${eyebrow("New dataset")}${H1("What do you want to predict?")}
+    ${lead("Describe the problem in one sentence. The agent proposes the features a domain expert would want, finds and scores sources, merges and validates the data, and keeps only the columns that help this problem. You approve each step, and every decision comes with a reason.")}
+    ${card(`<form id="compose" class="p-2">
+      <label for="problem" class="sr-only">Problem description</label>
+      <textarea id="problem" rows="3" maxlength="500" class="w-full resize-none bg-transparent px-3 py-3 text-base placeholder:text-zinc-400 focus:outline-none" placeholder="e.g. I want to predict house prices in Delhi">${esc(state.draft || "")}</textarea>
+      <div class="flex items-center justify-between gap-3 px-3 pb-2">
+        <span class="text-xs text-zinc-500">Press Enter to analyse · Shift+Enter for a new line</span>
+        <button id="btn-start" class="${BTN}" type="submit">Analyse problem ${icon("arrow")}</button>
+      </div></form>`, "mt-6")}
+    <div id="inline-error" class="hidden mt-3"></div>
+    <div class="mt-8 text-sm font-medium text-zinc-700 dark:text-zinc-300">Try an example</div>
+    <div class="grid sm:grid-cols-2 gap-3 mt-3">${EXAMPLES.map((e, i) => `<button data-ex="${i}" class="text-left rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-4 hover:border-accent-400 dark:hover:border-accent-600 hover:shadow-card transition">
+      <div class="font-medium">${e.title}</div><div class="text-xs text-zinc-500 mt-1">${e.meta}</div><div class="text-sm text-zinc-600 dark:text-zinc-400 mt-3">“${e.text}”</div></button>`).join("")}</div>
+    <div class="grid md:grid-cols-[1.4fr_1fr] gap-6 mt-10">
+      <div><div class="text-sm font-medium text-zinc-700 dark:text-zinc-300">How it works</div>
+        <ol class="mt-3 grid gap-3">${[
+          ["Understand", "An AI analyst turns your sentence into a target, task and feature list, with leaks and IDs removed."],
+          ["Find & trust", "Sources are matched to features and scored on authority, freshness, coverage, structure and licence."],
+          ["Merge & validate", "Units are normalised, duplicates removed and impossible values excluded; outliers are flagged, never deleted."],
+          ["Keep what helps", "Each column is scored by a model, statistics and domain judgement; leaks are blocked before they inflate results."],
+        ].map(([t, d], i) => `<li class="flex gap-3"><span class="w-6 h-6 rounded-full bg-accent-50 dark:bg-accent-500/10 text-accent-700 dark:text-accent-300 text-xs font-semibold flex items-center justify-center shrink-0">${i + 1}</span><div><div class="text-sm font-medium">${t}</div><div class="text-sm text-zinc-600 dark:text-zinc-400">${d}</div></div></li>`).join("")}</ol></div>
+      <div>${card(`<div class="p-4"><div class="flex items-center gap-2 text-sm font-medium">${icon("db")} Registered sources</div>
+        <ul class="mt-2">${src}</ul>
+        <p class="text-xs text-zinc-500 mt-3 leading-relaxed">This MVP reads registered open files. Live acquisition from the web (Stage 3) is the next build stage.</p></div>`)}</div>
+    </div></div>`;
+  const ta = $("problem");
+  ta.addEventListener("keydown", e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); start(); } });
+  ta.addEventListener("input", () => state.draft = ta.value);
+  $("compose").onsubmit = (e) => { e.preventDefault(); start(); };
+  document.querySelectorAll("[data-ex]").forEach(b => b.onclick = () => { ta.value = EXAMPLES[b.dataset.ex].text; state.draft = ta.value; start(); });
+}
+async function start() {
+  const problem = $("problem").value.trim();
+  if (problem.length < 10) return showInlineError("Please describe what you want to predict, and for where or when, in at least a few words.");
+  const b = $("btn-start"); b.disabled = true; b.innerHTML = `<span class="w-4 h-4 border-2 border-white/70 border-t-transparent rounded-full spin"></span> Analysing…`;
+  try {
+    state.job = await api("/api/jobs", {problem}); setUrl(state.job.id); state.overrides = {}; go("spec");
+  } catch (e) {
+    showInlineError(e.kind === "clarification" ? `The analyst needs a clearer problem: ${e.message}` : e.message);
+    b.disabled = false; b.innerHTML = `Analyse problem ${icon("arrow")}`;
+  }
+}
+
+/* ------------------------------------------------------------------ 2. spec */
+function viewSpec() {
+  const j = state.job, s = j.spec, r = j.requirement || {};
+  const locked = j.status !== "spec_ready";
+  const typeOpts = (f) => Object.entries(TYPE_LABEL).map(([k, v]) => `<option value="${k}" ${f.dtype === k ? "selected" : ""}>${v}</option>`).join("");
+  const rows = s.features.map(f => `<li class="py-4 border-t border-zinc-100 dark:border-zinc-800 first:border-0 grid grid-cols-[auto_minmax(0,1fr)] sm:grid-cols-[auto_minmax(0,1fr)_auto] gap-x-4 gap-y-3 items-start">
+      <input type="checkbox" class="keep mt-1 w-4 h-4 accent-[#1f7b72]" value="${esc(f.name)}" checked ${locked ? "disabled" : ""} aria-label="Include ${esc(label(f.name))}">
+      <div class="min-w-0"><div class="font-medium">${esc(label(f.name))}</div>
+        <div class="font-mono text-xs text-zinc-500 mt-0.5 break-all">${esc(f.name)}${f.unit ? " · " + esc(f.unit) : ""}</div>
+        <p class="text-sm text-zinc-600 dark:text-zinc-400 mt-1.5 leading-relaxed">${esc(f.description)}</p></div>
+      <div class="col-start-2 sm:col-start-3 flex items-center gap-3 sm:justify-end">
+        <label class="text-xs text-zinc-500 flex items-center gap-2">Type
+          <select data-type="${esc(f.name)}" ${locked ? "disabled" : ""} class="text-sm rounded-md border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-2 py-1.5">${typeOpts(f)}</select></label>
+        <label class="text-xs text-zinc-500 flex items-center gap-1.5"><input type="checkbox" data-req="${esc(f.name)}" ${f.required ? "checked" : ""} ${locked ? "disabled" : ""} class="w-3.5 h-3.5 accent-[#1f7b72]"> Required</label>
+      </div></li>`).join("");
+  const notes = [];
+  (r.assumptions || []).forEach(a => notes.push(["info", a]));
+  (r.excluded || []).forEach(x => { let t = x; try { const o = JSON.parse(x); t = `${label(o.name)}: ${o.reason}`; } catch (e) {} notes.push(["shield", t]); });
+  (r.guard_removed || []).forEach(x => notes.push(["shield", x]));
+  const nd = s.target;
+  $("view").innerHTML = `<div class="fade">
+    ${eyebrow("Step 2 · Human checkpoint")}${H1("Review the proposed specification")}
+    ${lead(`The analyst proposes <b>${s.features.length} features</b> to predict <b>${esc(label(nd.name))}</b>${s.region ? ` in <b>${esc(s.region)}</b>` : ""}. Untick anything you don't want, fix any wrong type, and approve. Nothing is fetched or merged until you do.`)}
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-6">${[
+      ["Target", label(nd.name), nd.unit ? `Unit: ${nd.unit}` : nd.name],
+      ["Task", s.task_type === "regression" ? "Predict a number" : s.task_type === "classification" ? "Predict a category" : s.task_type, s.task_type],
+      ["Region", s.region || "Any", s.region ? "Sources must match it" : "No geographic limit"],
+      ["Recency", `${s.temporal.half_life_years}-year half-life`, `Older rows count less (${r.volatility || "default"} change)`],
+    ].map(([k, v, sub]) => card(`<div class="p-4"><div class="text-xs text-zinc-500">${k}</div><div class="font-semibold mt-1 truncate" title="${esc(v)}">${esc(v)}</div><div class="text-xs text-zinc-500 mt-1 truncate">${esc(sub)}</div></div>`)).join("")}</div>
+    <div class="grid xl:grid-cols-[minmax(0,1fr)_300px] gap-6 mt-6">
+      ${card(`<div class="px-5 pt-4 pb-2 flex items-center justify-between"><h2 class="font-semibold">Features</h2><span id="sel-count" class="text-sm text-zinc-500 num"></span></div><ul class="px-5 pb-2">${rows}</ul>`)}
+      <div>${card(`<div class="p-4"><h2 class="font-semibold text-sm">Analyst notes</h2><ul class="mt-3 space-y-3">${notes.map(([ic, t]) => `<li class="flex gap-2 text-sm text-zinc-600 dark:text-zinc-400"><span class="text-zinc-400 mt-0.5">${icon(ic)}</span><span>${esc(t)}</span></li>`).join("") || '<li class="text-sm text-zinc-500">No notes.</li>'}</ul></div>`)}</div>
+    </div>
+    ${actionBar(`<span id="sel-summary"></span>`, `<button class="${BTN2}" id="btn-back">${icon("back")} Edit problem</button><button id="btn-spec" class="${BTN}" ${locked ? "" : ""}>${locked ? "Approved — view sources" : "Approve & find sources"} ${icon("arrow")}</button>`)}
+  </div>`;
+  const count = () => { const n = [...document.querySelectorAll(".keep")].filter(c => c.checked).length; $("sel-count").textContent = `${n} of ${s.features.length} selected`; $("sel-summary").innerHTML = `<b class="text-zinc-900 dark:text-zinc-100">${n}</b> of ${s.features.length} features will be searched for.`; };
+  document.querySelectorAll(".keep").forEach(c => c.onchange = count); count();
+  $("btn-back").onclick = () => { state.draft = j.problem; go("compose"); };
+  $("btn-spec").onclick = locked ? () => go("sources") : approveSpec;
+}
+async function approveSpec() {
+  const drop = [...document.querySelectorAll(".keep")].filter(c => !c.checked).map(c => c.value);
+  const overrides = {};
+  state.job.spec.features.forEach(f => {
+    const t = document.querySelector(`[data-type="${CSS.escape(f.name)}"]`).value;
+    const rq = document.querySelector(`[data-req="${CSS.escape(f.name)}"]`).checked;
+    const o = {}; if (t !== f.dtype) o.dtype = t; if (rq !== f.required) o.required = rq;
+    if (Object.keys(o).length) overrides[f.name] = o;
+  });
+  const b = $("btn-spec"); b.disabled = true; b.innerHTML = `<span class="w-4 h-4 border-2 border-white/70 border-t-transparent rounded-full spin"></span> Matching sources…`;
+  try { state.job = await api(`/api/jobs/${state.job.id}/spec/approve`, {drop_features: drop, overrides}); go("sources"); }
+  catch (e) { showInlineError(e.message); b.disabled = false; b.innerHTML = `Approve & find sources ${icon("arrow")}`; }
+}
+
+/* ------------------------------------------------------------------ 3. sources */
+const STATUS = {found: ["Available", "ok"], partial: ["Partly available", "warn"], derivable: ["Derivable later", "info"], not_found: ["Not found", "muted"]};
+function viewSources() {
+  const j = state.job, d = j.discovery;
+  const counts = {found: 0, partial: 0, derivable: 0, not_found: 0};
+  d.feasibility.forEach(f => counts[f.status]++);
+  const total = d.feasibility.length;
+  const optionalMissing = d.feasibility.filter(f => f.status === "not_found" && f.note.includes("optional")).length;
+  const seg = ["found", "partial", "derivable", "not_found"].map(k => counts[k] ? `<div class="h-full ${{found: "bg-emerald-500", partial: "bg-amber-400", derivable: "bg-sky-400", not_found: "bg-zinc-300 dark:bg-zinc-700"}[k]}" style="width:${counts[k] / total * 100}%" title="${STATUS[k][0]}: ${counts[k]}"></div>` : "").join("");
+  const entitySel = d.candidates.filter(c => c.role === "entity" && d.selected.includes(c.source_id));
+  const verdict = d.deliverable
+    ? `<b>${counts.found + counts.partial} of ${total}</b> columns are available from <b>${entitySel.length} source${entitySel.length === 1 ? "" : "s"}</b>${counts.derivable ? `, ${counts.derivable} can be derived once live acquisition exists` : ""}${counts.not_found ? `, and ${counts.not_found} were not found${optionalMissing === counts.not_found ? " (all optional)" : ""}` : ""}.`
+    : `This dataset can't be built honestly: ${esc(d.blocking.join("; "))}.`;
+  const feasRows = d.feasibility.map(f => {
+    const [txt, tone] = STATUS[f.status];
+    const isTarget = f.note.startsWith("target");
+    return `<tr class="border-t border-zinc-100 dark:border-zinc-800">
+      <td class="py-3 pr-4"><div class="font-medium flex items-center gap-2">${esc(label(f.feature))}${isTarget ? pill("Target", "accent") : ""}</div><div class="font-mono text-xs text-zinc-500 mt-0.5">${esc(f.feature)}</div></td>
+      <td class="py-3 pr-4">${pill(txt, tone)}</td>
+      <td class="py-3 pr-4 num text-sm">${f.coverage == null ? '<span class="text-zinc-500">after join</span>' : f.status === "not_found" ? '<span class="text-zinc-400">—</span>' : `<div class="flex items-center gap-2"><div class="w-16 h-1.5 rounded-full bg-zinc-100 dark:bg-zinc-800 overflow-hidden"><div class="h-full bg-emerald-500" style="width:${f.coverage * 100}%"></div></div>${pct(f.coverage)}</div>`}</td>
+      <td class="py-3 text-sm text-zinc-600 dark:text-zinc-400 hidden md:table-cell">${esc(f.sources.join(", ") || "—")}</td></tr>`;
+  }).join("");
+  const TC = {authority: "Authority", freshness: "Freshness", coverage: "Coverage", structure: "Structure", accessibility: "Licence & access"};
+  const rank = (c) => d.selected.includes(c.source_id) ? (c.role === "entity" ? 2 : 1) : 0;  // used > planned > not used
+  const srcCards = d.candidates.slice().sort((a, b) => (rank(b) - rank(a)) || b.trust - a.trust).map(c => {
+    const sel = d.selected.includes(c.source_id);
+    const st = sel && c.role === "entity" ? pill("Used", "ok", "check") : sel ? pill("Planned · needs live acquisition", "info") : pill("Not used", "muted");
+    const comps = Object.entries(c.trust_components).map(([k, v]) => `<div class="flex items-center gap-2 text-xs"><span class="w-28 text-zinc-500">${TC[k] || k}</span><div class="flex-1 h-1.5 rounded-full bg-zinc-100 dark:bg-zinc-800 overflow-hidden"><div class="h-full bg-zinc-400 dark:bg-zinc-500" style="width:${v * 100}%"></div></div><span class="num w-8 text-right text-zinc-600 dark:text-zinc-400">${Math.round(v * 100)}</span></div>`).join("");
+    return card(`<div class="p-4"><div class="flex items-start justify-between gap-3"><div class="min-w-0"><div class="font-medium leading-snug">${esc(c.title)}</div>
+      <div class="text-xs text-zinc-500 mt-1">${c.role === "entity" ? "Main records" : "Context data"} · licence: ${esc(c.licence || "not stated")}</div></div>
+      <div class="text-right shrink-0"><div class="text-xl font-semibold num">${Math.round(c.trust * 100)}</div><div class="text-[11px] text-zinc-500 -mt-0.5">trust</div></div></div>
+      <div class="mt-3 flex flex-wrap gap-2">${st}${c.covers.length ? pill(`${c.covers.length} feature${c.covers.length === 1 ? "" : "s"}`, "muted") : ""}</div>
+      <details class="mt-3"><summary class="text-xs text-zinc-500 cursor-pointer select-none">Why this score</summary><div class="mt-2 space-y-1.5">${comps}</div></details></div>`);
+  }).join("");
+  const rejected = d.rejected.length ? `<details class="mt-4">${"<summary class=\"text-sm text-zinc-600 dark:text-zinc-400 cursor-pointer select-none\">" + d.rejected.length + " source" + (d.rejected.length === 1 ? "" : "s") + " rejected</summary>"}<ul class="mt-2 space-y-1.5">${d.rejected.map(([s, w]) => `<li class="text-sm flex gap-2"><span class="text-zinc-400 mt-0.5">${icon("x")}</span><span><span class="font-medium">${esc(s)}</span> <span class="text-zinc-500">— ${esc(w)}</span></span></li>`).join("")}</ul></details>` : "";
+  const built = ["done", "needs_review", "failed", "building"].includes(j.status);
+  $("view").innerHTML = `<div class="fade">
+    ${eyebrow("Step 3 · Human checkpoint")}${H1("Review data availability")}
+    ${lead("Where each column would come from, how complete it is, and how far each source can be trusted. Approve to merge and validate.")}
+    <div class="mt-6">${card(`<div class="p-5"><div class="flex items-start gap-3">${d.deliverable ? `<span class="text-emerald-600 mt-0.5">${icon("check", "w-5 h-5")}</span>` : `<span class="text-rose-600 mt-0.5">${icon("alert", "w-5 h-5")}</span>`}
+      <p class="text-sm leading-relaxed">${verdict}</p></div>
+      <div class="mt-4 h-2 rounded-full overflow-hidden flex bg-zinc-100 dark:bg-zinc-800" role="img" aria-label="Feature availability">${seg}</div>
+      <div class="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-xs text-zinc-600 dark:text-zinc-400">${Object.keys(counts).map(k => `<span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full ${{found: "bg-emerald-500", partial: "bg-amber-400", derivable: "bg-sky-400", not_found: "bg-zinc-300 dark:bg-zinc-600"}[k]}"></span>${STATUS[k][0]} <b class="num text-zinc-800 dark:text-zinc-200">${counts[k]}</b></span>`).join("")}</div></div>`)}</div>
+    ${!d.deliverable ? `<div class="mt-4">${callout("bad", "Nothing will be fabricated", "No registered source provides what this problem needs. Register an open dataset in <span class=\"font-mono\">data/sources.json</span>, or try a problem the registered sources cover.", "alert")}</div>` : ""}
+    <div class="grid xl:grid-cols-[minmax(0,1fr)_340px] gap-6 mt-6">
+      ${card(`<div class="px-5 pt-4"><h2 class="font-semibold">Column availability</h2></div><div class="px-5 pb-3 overflow-x-auto scroll-thin"><table class="w-full text-sm"><thead><tr class="text-left text-xs text-zinc-500"><th class="py-2 pr-4 font-medium">Column</th><th class="py-2 pr-4 font-medium">Status</th><th class="py-2 pr-4 font-medium">Coverage</th><th class="py-2 font-medium hidden md:table-cell">From</th></tr></thead><tbody>${feasRows}</tbody></table></div>`)}
+      <div><h2 class="font-semibold text-sm mb-3">Sources</h2><div class="space-y-3">${srcCards}</div>${rejected}</div>
+    </div>
+    ${actionBar(d.deliverable ? `Trust = 35% authority · 20% freshness · 20% coverage · 15% structure · 10% licence` : `Approval is disabled until a source covers the target.`,
+      `<button class="${BTN2}" id="btn-back">${icon("back")} Back</button>${built ? `<button class="${BTN}" id="btn-feas">View results ${icon("arrow")}</button>` : `<button id="btn-feas" class="${BTN}" ${d.deliverable ? "" : "disabled"}>Approve & build dataset ${icon("arrow")}</button>`}`)}
+  </div>`;
+  $("btn-back").onclick = () => go("spec");
+  $("btn-feas").onclick = built ? () => go(j.status === "building" ? "build" : "results") : () => build(false);
+}
+
+/* ------------------------------------------------------------------ 4. build */
+const STAGES = ["Loading sources", "Integrating sources", "Validating", "Weighting by recency", "Scoring features"];
+const STAGE_HELP = {"Loading sources": "Reading the approved sources", "Integrating sources": "Normalising units, mapping columns, removing duplicates",
+  "Validating": "Checking every row against the spec's rules", "Weighting by recency": "Older rows count less", "Scoring features": "Model, statistics and AI judgement per column; leakage checks"};
+async function build(continueOnReview) {
+  try { state.job = await api(`/api/jobs/${state.job.id}/feasibility/approve`, {continue_on_review: continueOnReview}); }
+  catch (e) { return showInlineError(e.message); }
+  state.buildStart = Date.now(); go("build"); clearInterval(state.poll);
+  state.poll = setInterval(async () => {
+    try { state.job = await api(`/api/jobs/${state.job.id}`); } catch (e) { return; }
+    if (state.job.status === "building") { if (state.view === "build") viewBuild(); renderRail(); }
+    else { clearInterval(state.poll); state.tab = "overview"; go("results"); }
+  }, 900);
+}
+function viewBuild() {
+  const j = state.job; const cur = Math.max(0, STAGES.indexOf(j.stage));
+  const secs = state.buildStart ? Math.round((Date.now() - state.buildStart) / 1000) : 0;
+  const items = STAGES.map((s, i) => {
+    const done = i < cur || j.status !== "building", active = i === cur && j.status === "building";
+    return `<li class="flex gap-3 py-3 border-t border-zinc-100 dark:border-zinc-800 first:border-0">
+      ${done ? `<span class="w-6 h-6 rounded-full bg-accent-600 text-white flex items-center justify-center">${icon("check", "w-3.5 h-3.5")}</span>` : active ? `<span class="w-6 h-6 rounded-full border-2 border-accent-600 border-t-transparent spin"></span>` : `<span class="w-6 h-6 rounded-full border border-zinc-300 dark:border-zinc-700"></span>`}
+      <div><div class="text-sm font-medium ${!done && !active ? "text-zinc-400" : ""}">${s}</div><div class="text-xs text-zinc-500">${STAGE_HELP[s]}</div></div></li>`;
+  }).join("");
+  const first = !$("build-root");  // animate on entry only, not on every progress poll
+  $("view").innerHTML = `<div id="build-root" class="${first ? "fade" : ""}">${eyebrow("Step 4")}${H1("Building your dataset")}
+    ${lead("This usually takes 5–15 seconds. You can leave the page open; the run continues on the server.")}
+    <div class="grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-6 mt-6">
+      ${card(`<div class="p-5"><div class="flex items-center justify-between"><h2 class="font-semibold">Progress</h2><span class="text-sm text-zinc-500 num">${secs}s</span></div><ol class="mt-2">${items}</ol></div>`)}
+      ${card(`<div class="p-5"><h2 class="font-semibold">Activity log</h2><pre class="mt-3 text-xs font-mono text-zinc-600 dark:text-zinc-400 whitespace-pre-wrap leading-relaxed max-h-72 overflow-y-auto scroll-thin">${esc(j.log.filter(l => !l.startsWith("Traceback")).join("\n"))}</pre></div>`)}
+    </div></div>`;
+}
+
+/* ------------------------------------------------------------------ 5. results */
+function humanWarning(w) {
+  let m;
+  if ((m = w.match(/^dtype corrected: (\w+): spec says (\w+), but (\d+)\/(\d+) values are not numbers; treated as category/)))
+    return `${label(m[1])} was treated as a category: ${m[3]} of ${m[4]} values are text, not numbers.`;
+  if ((m = w.match(/^(\w+) <- (.+?): unit not stated in source; assumed (.+)$/)))
+    return `${label(m[1])}: the source doesn't state a unit; assumed ${m[3]}.`;
+  if ((m = w.match(/^(\w+) <- (.+?): mixed units in source: (.+)$/))) return `${label(m[1])}: mixed units in the source (${m[3]}), converted to one unit.`;
+  if ((m = w.match(/^(\d+) duplicate groups disagree on the target/))) return `${m[1]} near-identical records had different values for the target; both kept and flagged.`;
+  return w;
+}
+const TIER = {high: ["Strong signal", "ok"], medium: ["Useful", "accent"], low: ["Weak signal", "muted"], dropped: ["Dropped", "muted"], metadata: ["Identifier", "info"], leakage: ["Leakage", "bad"]};
+function humanCritical(c) {
+  let m;
+  if ((m = c.match(/^(\w+): (\d+)% of values \(unit ([^)]+)\) break 'in_range\(([-\d.]+), ([-\d.]+)\)'/))) {
+    const share = +m[2] === 100 ? "every value falls" : `${m[2]}% of values fall`;
+    return `<b>${esc(label(m[1]))}</b>: ${share} outside the expected ${nfmt(+m[4])}–${nfmt(+m[5])} ${esc(m[3] === "unstated" ? "" : m[3])}. The source probably uses a different unit or currency. Confirm it before using this data.`;
+  }
+  if ((m = c.match(/^(\w+): (\d+)% of values break 'isin\(\[(.*)\]\)'/))) {
+    const vals = m[3].split(",").map(s => s.trim().replace(/^'|'$/g, "")).slice(0, 4).join(", ");
+    return `<b>${esc(label(m[1]))}</b>: ${m[2]}% of values aren't in the expected list (${esc(vals)}…). The data uses different category names.`;
+  }
+  if ((m = c.match(/^only (\d+) valid rows, spec requires at least (\d+)/))) return `Only ${nfmt(+m[1])} valid rows; the spec asks for at least ${nfmt(+m[2])}.`;
+  return esc(c.replace(/^(\w+):/, (_, n) => label(n) + ":"));
+}
+function leakText(c) {
+  const tgt = label(state.job.spec.target.name);
+  let m;
+  if (/^named as a transform/.test(c.reason)) return `Its name shows it is computed from ${tgt} (a rate or transform of it).`;
+  if ((m = c.reason.match(/^target ~ \S+ x\/÷ (\S+)/))) return `${tgt} can be reproduced almost exactly from this column and ${label(m[1])}.`;
+  if (/^alone predicts the target/.test(c.reason)) return `On its own it predicts ${tgt} almost perfectly, which no genuine feature does.`;
+  if ((m = c.reason.match(/^semantic: (target_derived|future_info) \((.*)\)$/))) return m[2];
+  return c.reason;
+}
+function excludedReason(c) {
+  if (c.tier === "leakage") return "Derived from the target: it would leak the answer";
+  if (c.tier === "metadata") return "Identifier: names a record, doesn't describe it";
+  if (c.reason.startsWith("no values")) return "No data: no selected source provides it";
+  if (c.reason.startsWith("near-constant")) return "Almost the same value in every row";
+  return "Too little signal for this problem";
+}
+function viewResults() {
+  const j = state.job, q = j.quality || {}, rel = j.relevance, ig = j.integration || {};
+  if (j.status === "failed") {
+    $("view").innerHTML = `<div class="fade">${eyebrow("Step 5")}${H1("The build failed")}<div class="mt-6">${callout("bad", "Error", esc(j.error || "unknown error"), "alert")}</div>${actionBar("", `<button class="${BTN2}" id="btn-back">${icon("back")} Back to sources</button><button class="${BTN}" id="btn-retry">Retry</button>`)}</div>`;
+    $("btn-back").onclick = () => go("sources"); $("btn-retry").onclick = () => build(false); return;
+  }
+  const crit = (q.critical || []).map(c => `<li>${humanCritical(c)}</li>`).join("");
+  if (j.status === "needs_review") {
+    $("view").innerHTML = `<div class="fade">${eyebrow("Step 5 · Held for review")}${H1("The data doesn't match the specification")}
+      ${lead(`${nfmt(q.rows_valid || 0)} rows passed the hard checks and ${q.rows_excluded || 0} were excluded. But some of the spec's expectations don't fit this data, so <b>nothing has been delivered</b>. This usually means a unit, currency or category list in the spec is wrong and a person should confirm it.`)}
+      <div class="mt-6">${callout("warn", "Issues to resolve", `<ul class="list-disc pl-5 space-y-1">${crit}</ul>`, "alert")}</div>
+      ${actionBar("Continuing produces provisional results, clearly labelled as such.", `<button class="${BTN2}" id="btn-back">${icon("back")} Back</button><button class="${BTN}" id="btn-continue">Continue anyway (provisional)</button>`)}</div>`;
+    $("btn-back").onclick = () => go("sources"); $("btn-continue").onclick = () => build(true); return;
+  }
+  const metric = rel.metric === "r2" ? "R²" : rel.metric === "roc_auc" ? "AUC" : "F1";
+  const score = rel.holdout_scores.selected;
+  const scoreLine = rel.metric === "r2" ? `Explains ${Math.round(score * 100)}% of the variation in ${label(j.spec.target.name).toLowerCase()} on ${nfmt(rel.holdout_rows)} unseen rows` : `${metric} on ${nfmt(rel.holdout_rows)} unseen rows`;
+  const kept = rel.columns.filter(c => ["high", "medium", "low"].includes(c.tier));
+  const excl = rel.columns.filter(c => !["high", "medium", "low"].includes(c.tier));
+  const leaks = rel.columns.filter(c => c.tier === "leakage");
+  const tabs = [["overview", "Overview"], ["features", `Features · ${kept.length}`], ["quality", "Quality"], ["sources", "Sources & method"], ["data", "Data preview"]];
+  let provisional = j.continued_despite_review ? `<div class="mt-6">${callout("warn", "Provisional dataset", `Built despite open validation issues:<ul class="list-disc pl-5 mt-1 space-y-1">${crit}</ul>`, "alert")}</div>` : "";
+  if (rel.ai_review_missing) {
+    const why = (rel.notes.find(n => n.startsWith("semantic check unavailable")) || "").replace(/^semantic check unavailable: /, "");
+    provisional += `<div class="mt-6">${callout("warn", "AI review was unavailable for this run",
+      `The domain-judgement check couldn't run (${esc(why.includes("overloaded") ? "the AI provider was overloaded" : why.slice(0, 160))}). Leakage protection relied on rules only, and column scores use model and statistics alone. Re-running usually fixes this.
+       <div class="mt-3"><button id="btn-rerun" class="${BTN2}">Re-run scoring</button></div>`, "alert")}</div>`;
+  }
+  const kpis = [
+    ["Rows", nfmt(j.dataset.rows), `${nfmt(ig.rows_after_union)} merged · ${ig.exact_removed + ig.near_removed} duplicates removed`],
+    ["Columns kept", `${kept.length}`, `of ${rel.columns.length} candidates · ${excl.length} excluded with a reason`],
+    [`Accuracy (${metric})`, score.toFixed(3), scoreLine],
+    ["AI cost", "$" + ((j.cost && j.cost.usd) || 0).toFixed(4), `${(j.cost && j.cost.cache_hits) || 0} answers reused from cache`],
+  ].map(([k, v, sub]) => `<div class="p-5 border-zinc-200 dark:border-zinc-800"><div class="text-xs font-medium text-zinc-500">${k}</div><div class="text-3xl font-semibold tracking-tight num mt-1.5">${v}</div><div class="text-xs text-zinc-500 mt-1.5 leading-snug">${esc(sub)}</div></div>`).join("");
+  $("view").innerHTML = `<div class="fade">
+    <div class="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
+      <div>${eyebrow(j.continued_despite_review ? "Provisional dataset" : "Dataset ready")}${H1(esc(label(j.spec.target.name)) + (j.spec.region ? ` · ${esc(j.spec.region)}` : ""))}
+        <p class="text-sm text-zinc-500 mt-1">“${esc(j.problem)}”</p></div>
+      <div class="flex flex-wrap gap-2 shrink-0">
+        <a class="${BTN}" href="/api/jobs/${j.id}/download/dataset.csv">${icon("download")} Download CSV</a>
+        <a class="${BTN2}" href="/api/jobs/${j.id}/download/dataset.parquet">Parquet</a></div>
+    </div>
+    ${provisional}
+    ${card(`<div class="grid grid-cols-2 lg:grid-cols-4 divide-x divide-y lg:divide-y-0 divide-zinc-200 dark:divide-zinc-800">${kpis}</div>`, "mt-6 overflow-hidden")}
+    <div class="mt-8 border-b border-zinc-200 dark:border-zinc-800 flex gap-1 overflow-x-auto scroll-thin" role="tablist">${tabs.map(([k, t]) => `<button role="tab" aria-selected="${state.tab === k}" data-tab="${k}" class="px-3 py-2.5 text-sm font-medium whitespace-nowrap border-b-2 -mb-px ${state.tab === k ? "border-accent-600 text-zinc-900 dark:text-white" : "border-transparent text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200"}">${t}</button>`).join("")}</div>
+    <div id="tab" class="mt-6"></div></div>`;
+  const ctx = {j, q, rel, ig, kept, excl, leaks, metric, score};
+  const T = {overview: tabOverview, features: tabFeatures, quality: tabQuality, sources: tabSources, data: tabData};
+  const ON = "border-accent-600 text-zinc-900 dark:text-white", OFF = "border-transparent text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200";
+  document.querySelectorAll("[data-tab]").forEach(b => b.onclick = () => {
+    state.tab = b.dataset.tab;
+    document.querySelectorAll("[data-tab]").forEach(x => { const on = x === b; x.setAttribute("aria-selected", on); x.className = x.className.replace(on ? OFF : ON, on ? ON : OFF); });
+    T[state.tab](ctx);
+  });
+  if ($("btn-rerun")) $("btn-rerun").onclick = () => build(j.continued_despite_review);
+  T[state.tab](ctx);
+}
+function tabOverview({j, rel, kept, excl, leaks, metric, score}) {
+  const top = kept.slice(0, 8);
+  const max = Math.max(...top.map(c => c.fused_score), 0.01);
+  const bars = top.map(c => `<li class="grid grid-cols-[minmax(0,10rem)_minmax(0,1fr)_3rem] items-center gap-3 py-1.5">
+      <span class="text-sm truncate" title="${esc(c.column)}">${esc(label(c.column))}</span>
+      <div class="h-2 rounded-full bg-zinc-100 dark:bg-zinc-800 overflow-hidden"><div class="h-full rounded-full bg-accent-500" style="width:${c.fused_score / max * 100}%"></div></div>
+      <span class="text-xs num text-right text-zinc-500">${Math.round(c.fused_score * 100)}</span></li>`).join("");
+  const groups = {};
+  excl.forEach(c => { const r = excludedReason(c); (groups[r] = groups[r] || []).push(c); });
+  const inflated = rel.holdout_scores.all_columns;
+  const leak = leaks.length ? callout("bad", `Target leakage blocked: ${leaks.map(c => esc(label(c.column))).join(", ")}`,
+    `${leaks.map(c => esc(leakText(c))).join(" ")} ${inflated != null ? `Keeping it would have reported a misleading ${metric} of <b class="num">${inflated.toFixed(3)}</b> instead of the honest <b class="num">${score.toFixed(3)}</b>.` : ""}`, "shield") : rel.ai_review_missing
+    ? callout("warn", "No leaks found by the rules", "The AI review didn't run, so leakage was checked by name and structure rules only.", "shield")
+    : callout("ok", "No target leakage found", "None of the collected columns is computed from, or only known after, the value being predicted.", "shield");
+  $("tab").innerHTML = `<div class="grid xl:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)] gap-6">
+    <div class="space-y-6">${leak}
+      ${card(`<div class="p-5"><h2 class="font-semibold">What drives ${esc(label(j.spec.target.name).toLowerCase())}</h2><p class="text-sm text-zinc-500 mt-1">Combined relevance score (0–100) of the columns kept</p><ul class="mt-4">${bars}</ul>
+        <button class="mt-3 text-sm font-medium text-accent-700 dark:text-accent-300 hover:underline" data-goto="features">See every column and why ${icon("arrow", "w-3.5 h-3.5 inline")}</button></div>`)}</div>
+    <div class="space-y-6">${card(`<div class="p-5"><h2 class="font-semibold">Left out, with reasons</h2><ul class="mt-3 space-y-4">${Object.entries(groups).map(([r, cs]) => `<li><div class="text-sm font-medium">${esc(r)}</div><div class="mt-1.5 flex flex-wrap gap-1.5">${cs.map(c => pill(label(c.column), TIER[c.tier][1])).join("")}</div></li>`).join("") || '<li class="text-sm text-zinc-500">Nothing excluded.</li>'}</ul></div>`)}
+      ${card(`<div class="p-5"><h2 class="font-semibold">Downloads</h2><ul class="mt-3 divide-y divide-zinc-100 dark:divide-zinc-800">${[
+        ["dataset.csv", "Dataset (CSV)", "Selected columns plus provenance and row confidence"],
+        ["quality_report.json", "Quality report", "Checks, outliers, confidence bands, the data contract"],
+        ["relevance.json", "Feature relevance", "Scores, tiers and reasons for every column"],
+        ["integration_report.json", "Integration report", "Units, duplicates, column lineage"],
+        ["run_summary.json", "Run summary", "Spec, cost and status for reproducibility"],
+      ].filter(([n]) => (j.downloads || []).includes(n)).map(([n, t, d]) => `<li class="py-2.5 flex items-center justify-between gap-3"><div class="min-w-0"><div class="text-sm font-medium">${t}</div><div class="text-xs text-zinc-500">${d}</div></div><a class="p-2 rounded-md text-zinc-500 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800" href="/api/jobs/${j.id}/download/${n}" aria-label="Download ${t}">${icon("download")}</a></li>`).join("")}</ul></div>`)}</div></div>`;
+  document.querySelectorAll("[data-goto]").forEach(b => b.onclick = () => document.querySelector(`[data-tab="${b.dataset.goto}"]`).click());
+}
+function scoreCell(c) {
+  return `<div class="w-44"><div class="flex items-center gap-2"><div class="flex-1 h-1.5 rounded-full bg-zinc-100 dark:bg-zinc-800 overflow-hidden"><div class="h-full bg-accent-500" style="width:${c.fused_score * 100}%"></div></div><span class="num text-xs w-7 text-right">${Math.round(c.fused_score * 100)}</span></div>
+    <div class="text-[11px] text-zinc-500 mt-1 num">model ${Math.round(c.model_score * 100)} · stats ${Math.round(c.stat_score * 100)} · AI ${Math.round(c.semantic_score * 100)}</div></div>`;
+}
+function plainReason(c) {
+  const m = c.reason.match(/\((.*)\)\s*$/);
+  return m ? m[1] : c.reason.replace(/^semantic: \w+ \((.*)\)$/, "$1");
+}
+function tabFeatures({kept, excl}) {
+  // A list, not a table: stacked on narrow screens, four aligned columns on wide ones.
+  const GRID = "grid gap-x-6 gap-y-2 lg:grid-cols-[minmax(0,13rem)_7.5rem_11rem_minmax(0,1fr)] items-start";
+  const row = (c) => `<li class="${GRID} py-4 border-t border-zinc-100 dark:border-zinc-800 first:border-0">
+    <div class="min-w-0 flex items-start justify-between gap-3 lg:block"><div class="min-w-0"><div class="font-medium">${esc(label(c.column))}</div><div class="font-mono text-xs text-zinc-500 mt-0.5 truncate" title="${esc(c.column)}">${esc(c.column)}</div></div><div class="lg:hidden shrink-0">${pill(TIER[c.tier][0], TIER[c.tier][1])}</div></div>
+    <div class="hidden lg:block">${pill(TIER[c.tier][0], TIER[c.tier][1])}</div>
+    <div>${scoreCell(c)}</div>
+    <p class="text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed">${esc(["high", "medium", "low"].includes(c.tier) ? plainReason(c) : (c.tier === "leakage" ? leakText(c) : excludedReason(c)))}</p></li>`;
+  const table = (rows) => `<div class="hidden lg:grid ${GRID} text-xs text-zinc-500 font-medium pb-2"><span>Column</span><span>Verdict</span><span>Score</span><span>Why</span></div><ul>${rows}</ul>`;
+  $("tab").innerHTML = `${callout("info", "How columns are scored", "Score = 40% model importance (how much a gradient-boosting model relies on it) + 30% statistics (shared information with the target) + 30% AI judgement (domain relevance). Leaks, identifiers and empty columns are excluded regardless of score, but stay in the provenance record.")}
+    ${card(`<div class="px-5 pt-4"><h2 class="font-semibold">Kept · ${kept.length}</h2></div><div class="px-5 pb-3">${table(kept.map(row).join(""))}</div>`, "mt-6")}
+    ${card(`<div class="px-5 pt-4"><h2 class="font-semibold">Excluded · ${excl.length}</h2></div><div class="px-5 pb-3">${table(excl.map(row).join(""))}</div>`, "mt-6")}`;
+}
+function tabQuality({j, q, ig, rel}) {
+  const b = q.trust_bands || {}, total = (b.high || 0) + (b.medium || 0) + (b.low || 0) || 1;
+  const band = (k, cls, t) => `<div class="h-full ${cls}" style="width:${(b[k] || 0) / total * 100}%" title="${t}: ${b[k] || 0}"></div>`;
+  const outl = Object.entries(q.outliers || {}).filter(([, n]) => n);
+  const soft = (q.failed_checks || []).filter(f => f.severity === "soft");
+  const delivered = new Set([j.spec.target.name, ...rel.selected]);
+  const comp = Object.entries(q.completeness || {}).filter(([c]) => delivered.has(c)).sort((a, b) => a[1] - b[1]).slice(0, 8);
+  $("tab").innerHTML = `<div class="grid lg:grid-cols-2 gap-6">
+    ${card(`<div class="p-5"><div class="flex items-center justify-between"><h2 class="font-semibold">Validation</h2>${q.status === "passed" ? pill("Passed", "ok", "check") : pill("Needs review", "warn", "alert")}</div>
+      <dl class="mt-4 grid grid-cols-3 gap-4 text-sm">${[["Valid rows", nfmt(q.rows_valid)], ["Excluded", nfmt(q.rows_excluded)], ["Mean confidence", (q.mean_row_confidence ?? 0).toFixed(2)]].map(([k, v]) => `<div><dt class="text-xs text-zinc-500">${k}</dt><dd class="text-xl font-semibold num mt-1">${v}</dd></div>`).join("")}</dl>
+      <div class="mt-5 text-xs text-zinc-500">Row confidence = source trust × extraction method × cross-source agreement × checks passed</div>
+      <div class="mt-2 h-2 rounded-full overflow-hidden flex bg-zinc-100 dark:bg-zinc-800">${band("high", "bg-emerald-500", "High")}${band("medium", "bg-sky-400", "Medium")}${band("low", "bg-amber-400", "Low")}</div>
+      <div class="mt-2 flex gap-4 text-xs text-zinc-600 dark:text-zinc-400"><span>High ${b.high || 0}</span><span>Medium ${b.medium || 0}</span><span>Low ${b.low || 0}</span></div></div>`)}
+    ${card(`<div class="p-5"><h2 class="font-semibold">Completeness of delivered columns</h2><ul class="mt-3 space-y-2">${comp.map(([c, v]) => `<li class="grid grid-cols-[minmax(0,10rem)_minmax(0,1fr)_3rem] items-center gap-3"><span class="text-sm truncate">${esc(label(c))}</span><div class="h-1.5 rounded-full bg-zinc-100 dark:bg-zinc-800 overflow-hidden"><div class="h-full ${v > .9 ? "bg-emerald-500" : v > .5 ? "bg-amber-400" : "bg-rose-400"}" style="width:${v * 100}%"></div></div><span class="text-xs num text-right">${pct(v)}</span></li>`).join("")}</ul></div>`)}
+    ${card(`<div class="p-5"><h2 class="font-semibold">Outliers (flagged, never deleted)</h2><p class="text-sm text-zinc-500 mt-1">Unusual but possibly real values, such as luxury properties.</p><div class="mt-3 flex flex-wrap gap-2">${outl.map(([k, n]) => pill(`${label(k)} · ${n}`, "warn")).join("") || '<span class="text-sm text-zinc-500">None</span>'}</div>
+      <h3 class="font-medium text-sm mt-5">Soft check failures</h3><ul class="mt-2 space-y-1.5 text-sm">${soft.map(f => `<li class="flex justify-between gap-3"><span class="text-zinc-600 dark:text-zinc-400">${esc(label(f.column))}: ${esc(f.check.replace(/\(.*$/, ""))}</span><span class="num">${f.count}</span></li>`).join("") || '<li class="text-zinc-500">None</li>'}</ul></div>`)}
+    ${card(`<div class="p-5"><h2 class="font-semibold">Integration notes</h2><ul class="mt-3 space-y-2 text-sm text-zinc-600 dark:text-zinc-400 max-h-72 overflow-y-auto scroll-thin">${(ig.warnings || []).map(w => `<li class="flex gap-2"><span class="text-zinc-400 mt-0.5">${icon("info")}</span><span>${esc(humanWarning(w))}</span></li>`).join("") || "<li>None</li>"}</ul></div>`)}</div>`;
+}
+function tabSources({j, rel, metric}) {
+  const d = j.discovery;
+  const used = d.candidates.filter(c => d.selected.includes(c.source_id) && c.role === "entity");
+  const best = Math.max(...rel.strategies.map(s => s.mean));
+  const NAME = {"S-base": ["Main records only", "Columns from the main sources"], "S-full": ["Join every context source", "Add all context data"], "S-greedy": ["Add sources one by one", "Keep a source only if it helps"]};
+  $("tab").innerHTML = `<div class="grid lg:grid-cols-2 gap-6">
+    ${card(`<div class="p-5"><h2 class="font-semibold">Sources used</h2><ul class="mt-3 space-y-3">${used.map(c => `<li><div class="text-sm font-medium">${esc(c.title)}</div><div class="text-xs text-zinc-500 mt-0.5">Trust ${Math.round(c.trust * 100)} · licence ${esc(c.licence || "not stated")} · ${Object.keys(c.feature_map).length} columns mapped</div>
+      <div class="mt-2 flex flex-wrap gap-1.5">${Object.entries(c.feature_map).map(([f, col]) => `<span class="text-[11px] rounded border border-zinc-200 dark:border-zinc-800 px-1.5 py-0.5"><span class="text-zinc-500">${esc(col.trim())}</span> → ${esc(label(f))}</span>`).join("")}</div></li>`).join("")}</ul></div>`)}
+    ${card(`<div class="p-5"><h2 class="font-semibold">How sources were chosen</h2><p class="text-sm text-zinc-500 mt-1">Three strategies compared with nested cross-validation on training data only (${nfmt(rel.train_rows)} rows). The test set stayed untouched.</p>
+      <ul class="mt-4 space-y-3">${rel.strategies.map(s => `<li class="flex items-center gap-3"><div class="flex-1 min-w-0"><div class="text-sm font-medium flex items-center gap-2">${NAME[s.strategy][0]} ${s.strategy === rel.chosen ? pill("Chosen", "accent") : ""}</div><div class="text-xs text-zinc-500">${NAME[s.strategy][1]}</div></div><div class="text-right num"><div class="text-sm font-semibold">${s.mean.toFixed(3)}</div><div class="text-[11px] text-zinc-500">± ${s.sd.toFixed(3)} ${metric}</div></div></li>`).join("")}</ul>
+      ${rel.strategies.every(s => s.mean === best) ? `<p class="text-xs text-zinc-500 mt-4">All three tie because no context data could be loaded yet (live acquisition is the next build stage), so the simplest option was chosen.</p>` : ""}</div>`)}</div>`;
+}
+async function tabData({j}) {
+  $("tab").innerHTML = card(`<div class="p-5 text-sm text-zinc-500">Loading preview…</div>`);
+  try {
+    const p = await api(`/api/jobs/${j.id}/preview?rows=25`);
+    const cols = p.columns.filter(c => c !== "_sample_weight");
+    $("tab").innerHTML = card(`<div class="px-5 pt-4 flex items-center justify-between"><h2 class="font-semibold">First ${p.rows.length} of ${nfmt(j.dataset.rows)} rows</h2><a class="text-sm font-medium text-accent-700 dark:text-accent-300 hover:underline" href="/api/jobs/${j.id}/download/dataset.csv">Download all</a></div>
+      <div class="mt-3 overflow-auto max-h-[32rem] scroll-thin"><table class="w-full text-sm"><thead class="sticky top-0 bg-white dark:bg-zinc-900"><tr>${cols.map(c => `<th class="text-left font-medium text-xs text-zinc-500 px-5 py-2 whitespace-nowrap border-b border-zinc-200 dark:border-zinc-800">${c.startsWith("_") ? {"_row_ref": "Origin", "_source_id": "Source", "_row_confidence": "Confidence"}[c] || c : esc(label(c))}</th>`).join("")}</tr></thead>
+      <tbody>${p.rows.map(r => `<tr class="border-t border-zinc-100 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800/40">${cols.map(c => `<td class="px-5 py-2 whitespace-nowrap num ${c.startsWith("_") ? "text-zinc-500 text-xs font-mono" : ""}">${c.startsWith("_") && typeof r[c] === "string" ? esc(r[c]) : fmtValue(r[c], c)}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`);
+  } catch (e) { $("tab").innerHTML = callout("bad", "Preview unavailable", esc(e.message), "alert"); }
+}
+
+/* ------------------------------------------------------------------ chrome: runs menu, theme, new run, boot */
+async function openRuns() {
+  const m = $("runs-menu"); const open = m.classList.toggle("hidden") === false;
+  $("btn-runs").setAttribute("aria-expanded", open);
+  if (!open) return;
+  m.innerHTML = '<div class="px-3 py-2 text-zinc-500">Loading…</div>';
+  try {
+    const runs = await api("/api/jobs");
+    const ST = {done: ["Ready", "ok"], needs_review: ["Review", "warn"], failed: ["Failed", "bad"], building: ["Building", "info"], spec_ready: ["Spec", "muted"], feasibility_ready: ["Sources", "muted"]};
+    m.innerHTML = runs.length ? runs.map(r => `<button data-run="${r.id}" class="w-full text-left px-3 py-2 rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-800 flex items-start justify-between gap-3"><span class="min-w-0"><span class="block truncate">${esc(r.problem)}</span><span class="block text-xs text-zinc-500 font-mono">${r.id}</span></span>${pill(...(ST[r.status] || [r.status, "muted"]))}</button>`).join("") : '<div class="px-3 py-2 text-zinc-500">No runs yet in this session.</div>';
+    m.querySelectorAll("[data-run]").forEach(b => b.onclick = () => { m.classList.add("hidden"); loadRun(b.dataset.run); });
+  } catch (e) { m.innerHTML = `<div class="px-3 py-2 text-rose-600">${esc(e.message)}</div>`; }
+}
+function viewFor(job) {
+  return {spec_ready: "spec", feasibility_ready: "sources", building: "build", done: "results", needs_review: "results", failed: "results"}[job.status] || "compose";
+}
+async function loadRun(id) {
+  try {
+    state.job = await api(`/api/jobs/${id}`); setUrl(id); state.tab = "overview";
+    if (state.job.status === "building") { state.buildStart = Date.now(); go("build"); clearInterval(state.poll);
+      state.poll = setInterval(async () => { state.job = await api(`/api/jobs/${id}`); if (state.job.status !== "building") { clearInterval(state.poll); go("results"); } else if (state.view === "build") viewBuild(); }, 900);
+    } else go(viewFor(state.job));
+  } catch (e) { setUrl(null); state.job = null; go("compose"); showInlineError("That run is no longer available (the demo server keeps runs in memory)."); }
+}
+$("btn-runs").onclick = (e) => { e.stopPropagation(); openRuns(); };
+document.addEventListener("click", (e) => { if (!$("runs-menu").contains(e.target)) $("runs-menu").classList.add("hidden"); });
+$("btn-theme").onclick = () => { const d = document.documentElement.classList.toggle("dark"); try { localStorage.setItem("theme", d ? "dark" : "light"); } catch (e) {} };
+$("btn-new").onclick = () => { clearInterval(state.poll); state.job = null; state.draft = ""; setUrl(null); go("compose"); };
+
+(async function boot() {
+  try { state.sources = await api("/api/sources"); } catch (e) { state.sources = []; }
+  const run = new URL(location).searchParams.get("run");
+  if (run) await loadRun(run); else render();
+})();
+</script>
+</body>
+</html>
