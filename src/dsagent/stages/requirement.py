@@ -16,6 +16,7 @@ from dsagent.config import Settings, get_settings
 from dsagent.llm.client import LLMClient, LLMInvalidOutput
 from dsagent.llm.prompts import requirement as prompt
 from dsagent.schemas.spec import DatasetSpec, Feature, TemporalPolicy
+from dsagent.text import named_as_target_transform
 
 
 class RequirementError(RuntimeError):
@@ -48,10 +49,8 @@ def _guard_reason(feature: Feature, target: Feature) -> str | None:
     name, t = feature.name, target.name
     if name == t:
         return "same as target"
-    tokens = name.split("_")
-    if t in tokens or name.startswith(f"{t}_") or name.endswith(f"_{t}"):
-        if "per" in tokens or "log" in tokens or name.startswith(f"{t}_"):
-            return f"derived from target '{t}' (leakage)"
+    if named_as_target_transform(name, t):
+        return f"derived from target '{t}' (leakage)"
     if _ID_PATTERN.search(name):
         return "identifier-like column"
     return None

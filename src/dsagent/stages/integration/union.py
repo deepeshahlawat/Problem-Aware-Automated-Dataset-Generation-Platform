@@ -43,10 +43,10 @@ def _method(kind: str) -> str:
 
 
 def _extra(values: list) -> tuple[list, pl.DataType]:
-    """Unmapped column: numeric if >= 90% of non-missing values parse as numbers."""
+    """Unmapped column: numeric if >= 90% of non-missing values *are* numbers
+    (looks_numeric), not merely contain one ('Rohini Sector 25', 'Inspiron 7579')."""
     present = [v for v in values if not is_missing(v)]
-    nums = [parse_number(v)[0] for v in present]
-    if present and sum(n is not None for n in nums) / len(present) >= 0.9:
+    if present and sum(looks_numeric(v) for v in present) / len(present) >= 0.9:
         return [parse_number(v)[0] if not is_missing(v) else None for v in values], pl.Float64
     return [None if is_missing(v) else str(v).strip() for v in values], pl.Utf8
 

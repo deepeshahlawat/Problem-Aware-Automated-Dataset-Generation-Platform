@@ -20,7 +20,7 @@ from pathlib import Path
 from typing import Protocol
 from urllib.parse import quote
 
-from dsagent.llm.budget import Budget
+from dsagent.llm.budget import Budget, BudgetExceeded
 from dsagent.schemas.source import SourceDescriptor
 from dsagent.schemas.spec import DatasetSpec
 from dsagent.text import norm
@@ -169,6 +169,8 @@ class HuggingFaceCatalog:
         for q in search_queries(spec):
             try:
                 hits = self._get(f"{self.API}?search={quote(q)}&limit={self.limit}&full=true")
+            except BudgetExceeded:
+                raise  # a budget cap stops the run; it is not a network failure
             except Exception as exc:  # network problems degrade to fewer sources
                 self.warnings.append(f"search '{q}' failed: {exc}")
                 continue
@@ -178,6 +180,8 @@ class HuggingFaceCatalog:
         for ds_id, h in list(seen.items())[: self.limit]:
             try:
                 out.append(self._describe(ds_id, h))
+            except BudgetExceeded:
+                raise  # a budget cap stops the run; it is not a network failure
             except Exception as exc:
                 self.warnings.append(f"{ds_id}: no column sample ({exc})")
         return out

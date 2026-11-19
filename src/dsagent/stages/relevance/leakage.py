@@ -22,7 +22,7 @@ import polars as pl
 from dsagent.config import Settings
 from dsagent.schemas.spec import DatasetSpec
 from dsagent.stages.relevance.signals import ColumnStats
-from dsagent.text import norm
+from dsagent.text import named_as_target_transform
 
 
 @dataclass
@@ -33,10 +33,7 @@ class LeakFinding:
 
 
 def _name_leak(col: str, target: str) -> bool:
-    toks = norm(col.removeprefix("x_")).split("_")
-    t = norm(target).split("_")
-    has_target = all(x in toks for x in t)
-    return has_target and ("per" in toks or "log" in toks or norm(col.removeprefix("x_")).startswith(norm(target) + "_"))
+    return named_as_target_transform(col, target)
 
 
 def find_leakage(

@@ -117,8 +117,9 @@ def unit_hint_from_name(column: str) -> Optional[str]:
     for t in reversed(toks):
         if t in _CURRENCY_SYMBOLS:
             return _CURRENCY_SYMBOLS[t]
-        if t in _UNITS and len(t) > 1:
-            return t
+        # 'in' as a column-name word is the preposition ('Price_in_Lakhs'), never inches
+        if t in _UNITS and len(t) > 1 and t != "in":
+            return unit_key(t)
     return None
 
 
@@ -259,6 +260,19 @@ def normalise_column(
     if dtype in ("int", "float"):
         col_unit = declared_unit or unit_hint_from_name(column)
         seen_units: dict[str, int] = {}
+        if not target_unit:
+            # No unit in the spec: still bring mixed units ('1TB', '256GB') to one common
+            # unit, the column's most frequent one, so values stay comparable.
+            found: dict[str, int] = {}
+            for v in values:
+                if not is_missing(v):
+                    u0 = _parse_maybe_sum(v, cfg)[1] or col_unit
+                    if u0:
+                        k = unit_key(u0) if unit_key(u0) in _UNITS else u0
+                        found[k] = found.get(k, 0) + 1
+            if len(found) > 1:
+                target_unit = max(found, key=found.get)
+                rep.notes.append(f"spec gives no unit; mixed units converted to the dominant unit {target_unit}")
         for v in values:
             if is_missing(v):
                 out.append(None)

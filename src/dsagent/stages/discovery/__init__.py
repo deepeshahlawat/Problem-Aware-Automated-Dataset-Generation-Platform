@@ -15,6 +15,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 
 from dsagent.config import Settings, get_settings
+from dsagent.llm.budget import BudgetExceeded
 from dsagent.llm.client import LLMClient
 from dsagent.schemas.report import FeasibilityItem
 from dsagent.schemas.source import SourceCandidate, SourceDescriptor
@@ -159,6 +160,8 @@ def discover_sources(
     for cat in catalogs:
         try:
             descriptors += cat.find(spec)
+        except BudgetExceeded:
+            raise
         except Exception as exc:
             warnings.append(f"catalog {cat.name} failed: {exc}")
         warnings += getattr(cat, "warnings", [])

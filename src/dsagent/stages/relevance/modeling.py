@@ -35,7 +35,7 @@ class Encoder:
         for j, c in enumerate(cols):
             if c in self.categorical:
                 m = self.categorical[c]
-                out[:, j] = [m.get(v, np.nan) if v is not None else np.nan for v in df[c].to_list()]
+                out[:, j] = [m.get(str(v), np.nan) if v is not None else np.nan for v in df[c].to_list()]
             else:
                 out[:, j] = df[c].cast(pl.Float64, strict=False).fill_null(np.nan).to_numpy()
         return out

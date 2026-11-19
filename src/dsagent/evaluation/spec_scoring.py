@@ -9,12 +9,14 @@ because a correct feature under an unexpected name counts as a false positive he
 from __future__ import annotations
 
 import json
-import re
+
 from pathlib import Path
 
 from pydantic import BaseModel, Field
 
 from dsagent.schemas.spec import DatasetSpec
+from dsagent.text import norm
+from dsagent.text import tokens as _tokens
 
 
 class GoldFeature(BaseModel):
@@ -46,22 +48,8 @@ class SpecScore(BaseModel):
     forbidden_included: list[str]
 
 
-def norm(name: str) -> str:
-    return re.sub(r"[^a-z0-9]+", "_", name.lower()).strip("_")
-
-
 def _names(g: GoldFeature) -> set[str]:
     return {norm(g.name), *(norm(a) for a in g.aliases)}
-
-
-# Words that carry no meaning for matching: counts, articles, and qualifiers like
-# "nearest station" (distance_to_nearest_metro_station_km ~ distance_to_metro_km).
-_FILLER = {"num", "number", "no", "of", "the", "to", "from", "total", "nearest", "station",
-           "count", "is", "has", "in"}
-
-
-def _tokens(name: str) -> frozenset[str]:
-    return frozenset(t for t in norm(name).split("_") if t and t not in _FILLER)
 
 
 def _matches(pred: str, g: GoldFeature) -> int:

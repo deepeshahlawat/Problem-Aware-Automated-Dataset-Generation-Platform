@@ -11,6 +11,7 @@ No other module may import the Anthropic SDK directly.
 from __future__ import annotations
 
 import json
+import time
 from dataclasses import dataclass
 from typing import Literal, Protocol, TypeVar
 
@@ -55,6 +56,8 @@ class LLMBackend(Protocol):
 
 # Models that accept the server-side refusal fallback (`fallbacks: "default"`).
 # Claude Haiku 5.5 has no server-side fallback.
+_MAX_TOKENS_CEILING = 64000
+
 _SERVER_FALLBACK_MODELS = {"claude-opus-5-5", "claude-sonnet-5-5", "claude-opus-5"}
 
 
@@ -164,6 +167,31 @@ class OpenRouterBackend:
             "User-Agent": user_agent,
         }
 
+    RETRY_STATUS = {408, 429, 500, 502, 503, 504}
+
+    def _post_with_retry(self, body: dict, retries: int = 2, base_delay: float = 2.0):
+        """Retry transient failures (rate limit, gateway errors, timeouts) with backoff,
+        honouring Retry-After, like the Anthropic SDK does. Other errors surface at once."""
+        import httpx
+
+        for attempt in range(retries + 1):
+            try:
+                resp = self._http.post(self._url, headers=self._headers, json=body)
+            except httpx.TransportError as exc:  # timeouts, connection resets, DNS
+                if attempt == retries:
+                    raise LLMError(f"OpenRouter unreachable after {retries + 1} attempts: {exc}") from exc
+                time.sleep(base_delay * 2 ** attempt)
+                continue
+            if resp.status_code not in self.RETRY_STATUS or attempt == retries:
+                return resp
+            retry_after = getattr(resp, "headers", {}).get("retry-after")
+            try:
+                delay = float(retry_after) if retry_after else base_delay * 2 ** attempt
+            except ValueError:
+                delay = base_delay * 2 ** attempt
+            time.sleep(min(delay, 30.0))
+        return resp
+
     def call(
         self, *, model: str, system: str, user: str, schema: type[BaseModel], max_tokens: int
     ) -> BackendResult:
@@ -185,7 +213,7 @@ class OpenRouterBackend:
             "provider": {"require_parameters": True},
             "usage": {"include": True},
         }
-        resp = self._http.post(self._url, headers=self._headers, json=body)
+        resp = self._post_with_retry(body)
         if resp.status_code == 402:
             raise LLMError("OpenRouter: insufficient credits (HTTP 402). Run stopped.")
         if resp.status_code >= 400:
@@ -268,6 +296,7 @@ class LLMClient:
 
         attempts = 1 + self.settings.llm_max_retries_invalid_output
         last_error: Exception | None = None
+        limit = max_tokens or self.settings.llm_max_tokens
         for _ in range(attempts):
             self.budget.check_llm()
             result = self.backend.call(
@@ -275,7 +304,7 @@ class LLMClient:
                 system=system,
                 user=user,
                 schema=schema,
-                max_tokens=max_tokens or self.settings.llm_max_tokens,
+                max_tokens=limit,
             )
             self.budget.record_llm(
                 result.model_served, result.input_tokens, result.output_tokens, result.billed_cost
@@ -284,7 +313,9 @@ class LLMClient:
             if result.stop_reason == "refusal":
                 raise LLMRefusal(f"model declined the request ({model})")
             if result.stop_reason == "max_tokens":
-                last_error = LLMInvalidOutput("output truncated at max_tokens")
+                # Retrying the identical request would truncate again: give it more room.
+                last_error = LLMInvalidOutput(f"output truncated at max_tokens={limit}")
+                limit = min(limit * 2, _MAX_TOKENS_CEILING)
                 continue
 
             try:
